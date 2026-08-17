@@ -1,0 +1,1 @@
+"""Deterministic cop strategy boundary."""
