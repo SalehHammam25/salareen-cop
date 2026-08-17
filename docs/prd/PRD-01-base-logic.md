@@ -1,128 +1,75 @@
-# PRD 01 — Base Logic
+# PRD-01: Base Logic
 
-**Status:** Draft
-**Repository:** salareen-cop
-**Implementation:** Not started
+**Status:** Owner-approved requirements; implementation not started
+**Specification:** 3.0.0
+**Decision:** ADR-001
 
 ## Purpose
 
-This PRD defines the deterministic local game-physics foundation of the Base Logic stage: the discrete board, the coordinate system, legal movement, barriers, capture and survival conditions, and per-episode scoring.
+Define the deterministic local physics shared by both peers while preserving the cop's exclusive barrier authority. Networking, strategy, language, scent, cryptography, GUI, and reporting are excluded.
 
-This PRD defines behavior only. It contains no networking and no intelligence (heuristic, LLM, or reinforcement-learning) content.
+## Mandatory requirements
 
-## Mandatory Requirements
+### Configuration and state
 
-### Board and Coordinate System
+- Exactly two roles exist: cop and thief.
+- Shared `config/game.json` is validated before state creation; rejection creates no partial state.
+- Board size defaults to 7x7 and is a minimum.
+- Coordinate origin, starting index, and both starting positions are negotiable and must match between peers.
+- State records positions, permanent barriers, placed-barrier count, valid-step count, active role, terminal outcome, and score.
+- `max_moves` and `survival_threshold` each default to minimum 35 and, by ADR-001, must be equal.
+- Identical accepted configuration and action sequences produce identical results.
 
-- Exactly 2 agents participate (cop and thief).
-- [גודל הלוח] — default 7×7 — status: **minimum**.
-- Cells are represented as `(row, col)`.
-- [ראשית מערכת הצירים] (coordinate origin) — default: the top-left corner, i.e. the corner where cell (0,0) sits — status: **negotiable**.
-- [אינדקס התחלת הצירים] (starting index) — default: 0 — status: **negotiable**.
-- [עמדת פתיחה – גנב] and [עמדת פתיחה – שוטר] (starting positions) — default example: thief at center (3,3), cop at corner (0,0) — status: **negotiable**; the specific center/corner layout is stated as **example only**.
-- Whatever coordinate-origin, starting-index, and starting-position values are agreed must be identical between both peers — a mismatch between what each side counts from or starts at breaks the shared physics.
+### Actions and barriers
 
-### Movement
+- One active role performs exactly one action: N, S, E, W, STAY, or (cop only) barrier placement.
+- Movement is exactly one orthogonal cell; diagonal and off-board movement reject without mutation.
+- Neither peer may enter a barrier.
+- Barrier placement replaces cop movement, is limited to the cop cell or one orthogonally adjacent cell, and must be declared truthfully.
+- Barrier quota defaults to minimum 14; barriers are permanent and impassable.
+- Own-cell placement is allowed. Current cop occupancy is grandfathered until departure; re-entry is forbidden.
+- Rejected actions neither advance the turn nor consume resources.
 
-- On its turn, the active agent performs exactly one action.
-- That action is either: moving one cell in one of the four orthogonal directions (N/S/E/W), or staying in place.
-- Diagonal movement is prohibited.
-- An illegal diagonal-move attempt is rejected deterministically.
-- Blocked (barrier) cells cannot be crossed by either agent.
+### Capture and outcomes
 
-Off-grid movement behavior is not invented here — see Open Questions.
-
-### Barriers
-
-- Only the cop may place barriers.
-- Placing a barrier replaces movement for that turn (the cop cannot move and place a barrier in the same turn).
-- Placement is allowed on the cop's current cell or on one orthogonally adjacent cell.
-- [מכסת המחסומים] — default 14 — status: **minimum** (even though it functions as a maximum quota on the number of barriers the cop may place).
-- Barriers are permanent and impassable to both agents for the rest of the episode.
-- Every barrier placement, and its exact location, must be declared truthfully.
-- Hidden placement and lying about a barrier's location are prohibited.
-
-### Capture and End Conditions
-
-An episode ends as a **capture** when any of the following occurs:
-- the cop's and thief's coordinates overlap, and the cop declares a Capture Claim;
-- the cop places a barrier on the thief's current cell;
-- the thief has no legal move because all adjacent cells are blocked by barriers and/or board edges.
-
-An episode ends as a **survival** when the thief survives [סף ההישרדות] valid steps without capture.
-
-[תקרת הצעדים] is a separate mandatory parameter (a per-episode move ceiling). Its precise relationship to [סף ההישרדות] — whether they must coincide or can be negotiated to different values with different consequences — is left unresolved here; see Open Questions.
-
-A **technical-loss** outcome (a side crashing, exceeding time, or committing cryptographic forgery) is recognized as an end condition by Base Logic. Detection of crashes, timeouts, and cryptographic forgery itself belongs to later stages (orchestrator/watchdog, cryptography), not to this PRD.
+- Coordinate overlap, barrier-on-thief, and trapped-thief paths all require a valid local Capture Claim.
+- A trapped thief has no legal orthogonal destination; STAY is not an escape.
+- Capture is evaluated before survival.
+- Survival occurs at the equal configured threshold/ceiling without capture.
+- Technical loss is representable but its detection belongs to later stages.
+- Terminal state rejects further mutation.
 
 ### Scoring
 
-Fixed per-episode scores (Annex F status: **fixed** for all values below):
+Fixed score pairs are: capture (cop 20, thief 5), survival (cop 5, thief 10), technical loss (0, 0). Fixed series tie score 2 is outside Stage 1.
 
-| End condition | Cop score | Thief score |
-|---|---|---|
-| Capture | 20 | 5 |
-| Survival | 5 | 10 |
-| Technical loss | 0 | 0 |
+## Acceptance criteria
 
-The tie score (2) is a league/series-level rule — it applies when the *cumulative* score across a whole series of episodes ends level between two teams. It is outside the per-episode responsibility of PRD-01.
+- **BL-AC-01:** valid configuration creates complete deterministic state.
+- **BL-AC-02:** malformed, incomplete, below-minimum, inconsistent, or unequal ceiling/threshold configuration rejects atomically.
+- **BL-AC-03:** N/S/E/W and STAY behave deterministically.
+- **BL-AC-04:** diagonal, off-board, barrier-collision, wrong-role, combined, and terminal actions reject without mutation.
+- **BL-AC-05:** valid cop barriers replace movement, persist, consume quota once, and record exact location.
+- **BL-AC-06:** invalid location, duplicate, thief placement, and exhausted quota reject atomically.
+- **BL-AC-07:** own-cell grandfathering permits immediate occupancy and forbids later re-entry.
+- **BL-AC-08:** each capture path requires and validates the correct common claim.
+- **BL-AC-09:** STAY cannot avoid trapped-thief capture.
+- **BL-AC-10:** capture wins transition-order priority over survival.
+- **BL-AC-11:** each terminal outcome maps to its exact fixed score pair.
+- **BL-AC-12:** repeated complete executions are equal.
 
-### Deterministic Enforcement
+## Authority matrix
 
-- There is no external judge; the agents themselves enforce the game's physics.
-- Legality of moves, state transitions, capture conditions, and scores are all enforced by deterministic code.
-- An LLM must not decide whether a move is legal or whether a capture occurred.
-- Strategy selection (how an agent chooses its moves or barrier placements) is outside this PRD.
+| Source | Owned requirements |
+|---|---|
+| Appendix E 11-16 | identical configuration, movement, no diagonal, truthful barrier declaration/location |
+| Appendix E 21-22 | truthful Capture Claim behavior |
+| Appendix E 46-48 | barrier/trapped capture and fixed scoring |
+| Annex F Table 13 | board/coordinate/start values and statuses |
+| Annex F Table 15 | movement, barrier 14 minimum, ceiling/threshold 35 minimum |
+| Annex F Table 17 | fixed score values |
+| ADR-001 | formerly ambiguous Stage 1 transitions |
 
-Annex F status of every numerical parameter referenced above:
-- [גודל הלוח] — minimum
-- [מכסת המחסומים] — minimum
-- [סף ההישרדות] — minimum
-- [תקרת הצעדים] — minimum
-- [ראשית מערכת הצירים] — negotiable
-- [אינדקס התחלת הצירים] — negotiable
-- [עמדת פתיחה – גנב] / [עמדת פתיחה – שוטר] — negotiable
-- Capture, survival, and technical-loss scores — fixed
-- Tie score — fixed (league/series-level, not per-episode)
+## Non-goals
 
-## Non-Goals
-
-- FastMCP and networking
-- Distributed processes
-- Scent and pheromones
-- Natural-language hints
-- LLM integration
-- Strategy selection and path planning
-- Commit-Reveal, Nonce, hashing, and log audit
-- Watchdog and timeout detection
-- GUI
-- Replay
-- Gmail and reporting
-
-## Acceptance Criteria
-
-1. On its turn, an agent can move one cell orthogonally or remain in place.
-2. A diagonal move is rejected.
-3. Movement into a barrier is rejected.
-4. The cop can replace movement with a valid barrier placement.
-5. A barrier remains impassable for the rest of the episode.
-6. A placement beyond [מכסת המחסומים] is rejected.
-7. Coordinate overlap with a valid Capture Claim ends the episode as capture.
-8. A barrier placed on the thief's cell ends the episode as capture.
-9. A thief with no legal moves is captured.
-10. Reaching [סף ההישרדות] valid steps without capture ends the episode as survival.
-11. Capture, survival, and technical loss return the correct fixed score pairs.
-12. The same agreed physics configuration produces the same deterministic outcome.
-
-The following is a **recommended Chapter-10 milestone**, not an additional mandatory requirement:
-- both agents move legally;
-- excess barriers are rejected;
-- coordinate overlap triggers capture.
-
-## Open Questions
-
-1. What exact response is required when a move targets a coordinate outside the board?
-2. What is the precise relationship between [תקרת הצעדים] and [סף ההישרדות] if negotiated to different values?
-3. Do barrier-on-thief-cell capture and trapped-thief capture require the same Capture Claim and later cryptographic truth-verification flow as coordinate-overlap capture?
-4. When the cop places a barrier on the cell it currently occupies, how is its immediate occupancy handled after that cell becomes impassable to both agents?
-5. Is `config/game.json` used directly during Base Logic, or introduced only after the configuration layer is implemented?
+FastMCP, public endpoints, strategy selection, scent, language providers, Commit-Reveal, watchdog detection, GUI, replay, Gmail, and league aggregation.

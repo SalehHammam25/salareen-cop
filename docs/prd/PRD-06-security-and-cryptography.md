@@ -1,25 +1,7 @@
-# PRD 06 — Security and Cryptography
+# PRD-06: Security and Cryptography
 
-**Status:** Draft
-**Repository:** salareen-cop
+**Status:** Future stage; requirements extraction not started
+**Repository:** `salareen-cop`
 **Implementation:** Not started
 
-## Purpose
-
-TBD — must be derived from the official specification before implementation.
-
-## Mandatory Requirements
-
-TBD — do not infer or invent requirements.
-
-## Non-Goals
-
-TBD.
-
-## Acceptance Criteria
-
-TBD — must describe observable end-to-end behavior.
-
-## Open Questions
-
-TBD.
+Stage 6 is intentionally outside the Stages 1-5 alignment scope. Its requirements must later be derived from specification v3.0.0, especially Appendix E and Annex F, before implementation.
