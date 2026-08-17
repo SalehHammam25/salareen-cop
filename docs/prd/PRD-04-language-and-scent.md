@@ -50,3 +50,7 @@ Add shared dynamic scent and natural-language evidence while maintaining a cop-s
 ## Non-goals
 
 Commit-Reveal locking, public tunnels, Gmail, GUI, replay, RL training, and provider-specific private credentials.
+
+## Live-match composition extension
+
+For an accepted movement/STAY turn, composition order is previous-field decay, new emission, maximum/clipping, scent observation, optional validated qualitative hint, scent-first then language belief update, and next-turn strategy input. Rejected actions and cop barrier actions do not emit movement scent. Versioned scent/hint message contracts and cross-peer ordering tests remain pending.

@@ -113,3 +113,15 @@ Each item is meaningful implementation or verification work. IDs are stable and 
 ## Completion gate
 
 Stage 5 completes only after every applicable task is finished, acceptance criteria have tests, evidence records exact results, adversarial defects are corrected, and a Pull Request is approved and merged.
+
+## Live-match composition backlog
+
+- [ ] **LM-CLD-001** Implement the independent `salareen_cop` production game runner; do not create a central runner.
+- [ ] **LM-CLD-002** Compose configuration, Base Logic, cop strategy, MCP, scent/language/belief, recovery and local structured logs.
+- [ ] **LM-CLD-003** Enforce the strict no-query remote endpoint rule and add shared endpoint fixtures.
+- [ ] **LM-CLD-004** Wire pause/resume around the live turn loop using exact recovery identity.
+- [ ] **LM-CLD-005** Prevent acknowledged actions from being applied twice after retry or reconnect.
+- [ ] **LM-CLD-006** Implement Capture Claim, survival, terminal and Annex F score reconciliation without Stage 6 proof.
+- [ ] **LM-CLD-007** Add all eight byte-stable cross-repository fixtures specified by the contract.
+- [ ] **LM-CLD-008** Run deterministic two-process complete localhost matches with logs and orphan-free shutdown.
+- [ ] **LM-CLD-009** Align Python/FastMCP/MCP/pytest/Ruff manifest constraints in a later implementation branch.

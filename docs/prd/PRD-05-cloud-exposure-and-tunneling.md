@@ -51,3 +51,7 @@ Expose the working cop FastMCP Streamable HTTP endpoint through a stable public 
 ## Non-goals and blocker
 
 No discovery service, central judge, cryptographic authentication, Commit-Reveal, Gmail, GUI, or reporting. Final acceptance requires a compatible implemented cop, the thief peer, two machines, and authorized network access.
+
+## Live runner and strict endpoint extension
+
+ADR-006 and the shared live-match contract own independent runner composition, exact-identity pause/resume, acknowledged-action protection, terminal reconciliation and controlled shutdown. Remote endpoints must use HTTPS, exact configured host/permitted port and `/mcp`, with no userinfo, query, fragment, localhost or private address. Expected-role checking is protocol validation only. The runner, adapters and full-match tests remain unimplemented.

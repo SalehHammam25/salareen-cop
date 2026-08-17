@@ -113,3 +113,11 @@ Each item is meaningful implementation or verification work. IDs are stable and 
 ## Completion gate
 
 Stage 4 completes only after every applicable task is finished, acceptance criteria have tests, evidence records exact results, adversarial defects are corrected, and a Pull Request is approved and merged.
+
+## Live-match composition backlog
+
+- [ ] **LM-LSB-001** Connect accepted movement/STAY to scent decay/emission exactly once; exclude rejected and barrier actions.
+- [ ] **LM-LSB-002** Implement versioned scent observation and language hint transport adapters.
+- [ ] **LM-LSB-003** Apply scent before language evidence and expose the result only to the next cop strategy invocation.
+- [ ] **LM-LSB-004** Test coordinate prohibition, provider fallback and token accounting inside complete turns.
+- [ ] **LM-LSB-005** Add byte-identical Stage 4 turn fixtures and cross-process ordering tests.

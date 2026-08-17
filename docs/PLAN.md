@@ -68,3 +68,7 @@ Every TODO task has a stable stage ID and cites its PRD section or acceptance cr
 ## Known specification tensions
 
 Do not silently resolve the series count conflict (`num_games: 1` example versus Annex F fixed 6), the one-counted-game-per-opponent rule, simplified versus full commitment examples, or differing timeout examples. Stages 1-5 use only decisions explicitly recorded in ADRs; later-stage contradictions remain open until their owning stage.
+
+## Live-match composition recovery plan
+
+The Stage 1-5 components are not yet a playable system. ADR-006 and `docs/contracts/live-match-orchestration-v1.md` define the production composition. Implementation order is shared schemas/fixtures, expected-role and endpoint convergence, cop runner/adapters, thief runner compatibility, exactly-once/recovery wiring, deterministic localhost matches, then authorized remote proof. Every runner remains peer-local; no central coordinator is allowed. Stage 6 security primitives and Stage 7 reporting remain excluded.

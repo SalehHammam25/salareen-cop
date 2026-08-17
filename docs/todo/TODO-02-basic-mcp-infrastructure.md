@@ -113,3 +113,11 @@ Each item is meaningful implementation or verification work. IDs are stable and 
 ## Completion gate
 
 Stage 2 completes only after every applicable task is finished, acceptance criteria have tests, evidence records exact results, adversarial defects are corrected, and a Pull Request is approved and merged.
+
+## Live-match composition backlog
+
+- [ ] **LM-MCP-001** Implement strict schemas and tools from live-match-orchestration-v1 without changing the six-field geometry envelope.
+- [ ] **LM-MCP-002** Enforce configured expected-opponent role and test `WRONG_EXPECTED_ROLE` without claiming authentication.
+- [ ] **LM-MCP-003** Implement validation order, shared rejection vocabulary and mutating-message idempotency keys.
+- [ ] **LM-MCP-004** Add byte-identical initialization, normal-turn, barrier, duplicate-ack and terminal fixtures.
+- [ ] **LM-MCP-005** Test lost acknowledgement, duplicate mismatch, FIFO retention and fresh-process replay.
