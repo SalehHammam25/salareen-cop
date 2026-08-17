@@ -1,203 +1,70 @@
 # Project Implementation Plan
 
-**Status:** Active
-**Repository:** salareen-cop
-**Current stage:** Stage 1 — Base Logic
-**Implementation:** Not started
+**Status:** Stages 1-5 documentation aligned; implementation not started
+**Repository:** `salareen-cop`
+**Specification:** 3.0.0
+**Owner:** Areen
 
-## Development Lifecycle
+## Authority and governance
 
-The required workflow is:
+The requirements PDF controls. Appendix E controls mandatory-rule coverage and Annex F controls numerical values. ADRs record owner-approved interpretations where the PDF is ambiguous or where both peers require one exact contract. The thief repository is compatibility evidence only.
 
-Idea → PRD → PLAN → TODO → Verify → Execute → Push to GitHub
+Independent human review is not required under the owner-approved policy. Every stage still requires a focused branch, Pull Request, Codex-assisted adversarial review, automated verification, recorded evidence, and a clean synchronized `main` before the next stage.
 
-- Implementation must not begin until the related PRD, PLAN, and TODO have been reviewed.
-- Every PRD requirement must be traceable to PLAN work and TODO tasks.
-- Each meaningful change is developed on a branch, tested, reviewed through a Pull Request, and merged into main only when stable.
-- Git history must show continuous, meaningful development.
-- The project TODO files should eventually contain at least 500 meaningful tasks in total, with 800–1000 presented by the course as an ideal level of decomposition.
-- Tasks must be genuine work items, not artificial padding.
+## Lifecycle
 
-## Course Engineering Constraints
+`PRD -> ADR -> PLAN -> TODO -> traceability review -> implementation -> automated verification -> adversarial review -> PR -> merge`
 
-- Project work is performed through terminal commands.
-- Claude CLI is the preferred agent interface.
-- Python environment and dependency management use `uv`.
-- Unit tests are required.
-- Every Python file must remain at or below 150 lines, with no exceptions; longer files must be split by responsibility.
-- Deterministic rules must remain separate from LLM behavior.
-- No secrets, credentials, tokens, or private keys may ever be committed.
-- Exact commands and test results must be recorded during implementation.
-- Invalid input must fail explicitly and must not silently mutate state.
+Implementation files must remain separate from documentation, deterministic rules must remain separate from LLM/provider behavior, invalid inputs must reject without mutation, secrets must never enter Git, and every future Python file must remain at or below 150 lines.
 
-Project actions are performed through the terminal; this does not prohibit the use of VS Code itself.
+## Stage order and gates
 
-## Stage Order
+The Chapter 10 order is recommended by the specification and adopted as project policy:
 
 1. Base Logic
 2. Basic MCP Infrastructure
-3. Blind Strategy
-4. Language and Scent
+3. Blind Cop Strategy
+4. Language, Scent, and Belief
 5. Cloud Exposure and Tunneling
-6. Security and Cryptography
-7. Reporting and Visualization Shell
+6. Security and Cryptography (future)
+7. Reporting and Visualization Shell (future)
 
-This order follows Chapter 10's recommended staged approach. It is **recommended, not mandatory**.
+Each stage must work end-to-end before its successor begins. Stages 6-7 retain future-stage stubs and are outside this alignment scope.
 
-Later stages must not be implemented before their prerequisites work end-to-end.
+## Stage 1 - Base Logic
 
-## Stage 1 — Base Logic
+Build a deterministic, local, single-process rules engine from validated shared configuration. Implement board state, orthogonal movement and STAY, cop-only permanent barriers, all capture paths through the common local Capture Claim boundary, survival, technical-loss representation, and fixed scoring. Apply ADR-001: off-board rejection without mutation; equal `max_moves` and `survival_threshold`; grandfathered immediate cop occupancy on a newly placed own-cell barrier; STAY does not defeat trapped capture; capture precedes survival. No networking or strategy enters this stage.
 
-### Objective
+Gate: PRD-01 acceptance criteria and Appendix E rules 11-16 and 46-48 are covered by deterministic tests; Annex F Tables 13, 15, and 17 are enforced; shared configuration produces repeatable state; all rejected actions preserve state.
 
-Build and verify the deterministic, local, single-process game-physics foundation for the cop peer.
+## Stage 2 - Basic MCP Infrastructure
 
-It must cover:
+Run cop and thief as wholly separate FastMCP server/client processes using Streamable HTTP. Adopt the exact `1.0-provisional` geometry fixture and strict fields only: `protocol_version`, `correlation_id`, `sender_role`, `x`, `y`, `step`. Expose `receive_geometry` and `relay_geometry`; keep session and phase local, route transport through one orchestrator, reject illegal phases, bound waits/retries, and implement the shared FIFO-100 duplicate policy. No shared runtime state or remote-blame inference.
 
-- board and coordinate state;
-- legal movement;
-- barriers;
-- capture and survival;
-- technical-loss outcome representation;
-- fixed per-episode scoring;
-- deterministic repeatability.
+Gate: two separate localhost processes both serve and call; the shared fixture decodes identically; malformed, unknown-version, stale, out-of-phase, and duplicate-mismatch messages reject without mutation; Appendix E rules 1-9 are owned.
 
-Networking, FastMCP, strategy, LLMs, cryptography, GUI, replay, and reporting are excluded.
+## Stage 3 - Blind Cop Strategy
 
-### Inputs
+Add a deterministic cop policy behind a strategy boundary. The cop pursues likely thief positions and may spend barriers to contain escape routes; it must not copy the thief's escape objective. Every proposal passes through Base Logic validation. Tie-breaking and fallbacks are typed and deterministic. Reinforcement learning is excluded unless separately approved.
 
-- `docs/prd/PRD-01-base-logic.md`
-- Annex F numerical values and statuses already recorded in PRD-01
-- the five unresolved PRD Open Questions
-- `docs/todo/TODO-01-base-logic.md`, currently prepared on its dedicated Draft Pull Request branch and awaiting revision against this PLAN
+Gate: legal pursuit/barrier proposals, deterministic repeatability, adversarial fallback coverage, no LLM movement authority, and no Stage 4 dependencies.
 
-PRD-01 is merged but still marked Draft, so formal approval must be completed before implementation begins.
+## Stage 4 - Language, Scent, and Belief
 
-### Implementation Sequence
+Match the shared thief scent arithmetic exactly: fixed center intensity 0.9, fixed decay 0.10, fixed 5x5 emission field, overlap aggregation, clipping, edge behavior, and transition ordering. Add natural-language hints with a negotiable maximum default of 15 words, forbid numeric coordinate communication, and maintain a cop-specific belief over thief location. Provider output may create verbal text only and cannot directly select actions.
 
-The implementation strategy follows this dependency order. No filenames, classes, functions, or APIs are specified here.
+Gate: cross-peer scent fixtures agree exactly; hint validation and token accounting are deterministic; belief remains normalized; cop decisions consume belief through the Stage 3 boundary; Appendix E rules 25-27 are owned.
 
-1. Environment and project foundation
-   - initialize the Python project with `uv`;
-   - establish source and unit-test separation;
-   - establish checks for the 150-line Python-file limit;
-   - confirm secrets and local environments are excluded from Git.
+## Stage 5 - Cloud Exposure and Tunneling
 
-2. Shared deterministic game state
-   - represent both agent roles;
-   - board dimensions and coordinate conventions;
-   - starting and current positions;
-   - barriers and barrier quota;
-   - valid-step count;
-   - episode status;
-   - outcome and score pair.
+Expose the local Streamable HTTP endpoint through ngrok using an owner-assigned stable development domain supplied privately. Never store the domain, opponent endpoint, or authentication token. Match the thief's pause, retry, watchdog, redaction, failure-attribution, exact resume-identity, and idempotent shutdown contracts. Reachability is not authentication; Stage 6 owns trust.
 
-3. Movement validation
-   - orthogonal one-cell movement;
-   - staying in place;
-   - diagonal rejection;
-   - barrier collision rejection;
-   - no state mutation after rejection.
+Gate: local and fake-provider verification passes; public endpoint checks are redacted; reconnect reuses the stable domain; resume requires exact game/session/protocol/turn/phase equality; final gate remains blocked until two independent machines complete a bidirectional match.
 
-4. Barrier behavior
-   - only the cop may place barriers;
-   - placement replaces movement;
-   - location validation;
-   - quota enforcement;
-   - permanence and impassability;
-   - exact declared location storage.
+## Cross-stage traceability
 
-5. End-condition evaluation
-   - coordinate-overlap capture with Capture Claim;
-   - barrier-on-thief-cell capture;
-   - trapped-thief capture;
-   - survival threshold;
-   - representation of technical loss without implementing later-stage detection mechanisms.
+Every TODO task has a stable stage ID and cites its PRD section or acceptance criterion. Each PRD contains an Appendix E/Annex F table. Verification must check unique task IDs, no unresolved markers, documentation/code scope, numeric authority, secret absence, and exact shared fixture compatibility.
 
-6. Scoring
-   - Capture: cop 20, thief 5;
-   - Survival: cop 5, thief 10;
-   - Technical loss: cop 0, thief 0;
-   - tie score 2 remains outside per-episode Base Logic.
+## Known specification tensions
 
-7. Unit-test implementation
-   - cover every PRD-01 acceptance criterion;
-   - cover legal movement, explicitly specified illegal actions, quota, capture, survival, scoring, and determinism behavior;
-   - off-grid boundary behavior remains blocked from implementation and testing until its Open Question receives a documented decision;
-   - after that decision, add the corresponding boundary tests before Base Logic can be completed;
-   - verify rejected actions do not mutate state.
-
-8. Verification and review
-   - run the complete unit-test suite;
-   - run the 150-line limit check;
-   - review PRD-to-PLAN-to-TODO traceability;
-   - record exact commands and results;
-   - open a Pull Request;
-   - merge only after review and successful verification.
-
-### Open-Question Handling
-
-The five unresolved PRD questions:
-
-1. off-grid movement response;
-2. relationship between move ceiling and survival threshold;
-3. Capture Claim requirements for barrier/trapped capture;
-4. cop occupancy after placing a barrier on its own cell;
-5. when `config/game.json` enters the Base Logic lifecycle.
-
-For each one:
-
-- it must not be silently answered through implementation;
-- affected implementation work remains blocked until a documented decision is made;
-- the decision must be recorded before the relevant TODO item is executed.
-
-These questions are not resolved here.
-
-### Verification Gate
-
-Base Logic may be declared complete only when:
-
-- PRD-01 has formal approval;
-- every acceptance criterion maps to at least one unit test;
-- all tests pass;
-- all Python files satisfy the 150-line limit;
-- execution is deterministic;
-- no unresolved question was answered by assumption;
-- no networking, strategy, LLM, cryptography, GUI, replay, or reporting work was introduced;
-- any behavior previously blocked by an Open Question has a documented decision and corresponding tests before completion;
-- the Pull Request is reviewed and merged;
-- main is clean and synchronized with origin/main.
-
-## Later-Stage Planning
-
-For Stages 2–7:
-
-- their PRD must be completed and approved first;
-- their section in PLAN must then be expanded;
-- their detailed TODO must then be prepared and verified;
-- implementation begins only after that cycle is complete.
-
-No technical details beyond this have been extracted from their PRDs yet.
-
-## Planning Snapshot
-
-This section records the repository state while this PLAN was prepared and is not a permanent runtime requirement.
-
-- PRD-01 is merged into main.
-- PRD-01 is still labeled Draft and requires a later approval update.
-- The TODO-01 branch and Draft Pull Request exist but must not be merged yet.
-- No implementation code exists.
-- This PLAN was prepared on branch `docs/plan-01-base-logic`.
-
-## Next Documentation Steps
-
-1. Review the expanded PLAN.
-2. Commit and push the PLAN branch.
-3. Open and review the PLAN Pull Request.
-4. Merge PLAN into main.
-5. Update the TODO-01 branch with main.
-6. Revise TODO-01 so it follows the approved PLAN and course constraints.
-7. Verify PRD ↔ PLAN ↔ TODO coverage.
-8. Merge TODO-01.
-9. Formally approve PRD-01 before implementation.
-10. Create a dedicated Base Logic implementation branch.
+Do not silently resolve the series count conflict (`num_games: 1` example versus Annex F fixed 6), the one-counted-game-per-opponent rule, simplified versus full commitment examples, or differing timeout examples. Stages 1-5 use only decisions explicitly recorded in ADRs; later-stage contradictions remain open until their owning stage.

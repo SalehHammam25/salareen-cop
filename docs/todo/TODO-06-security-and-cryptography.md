@@ -1,10 +1,6 @@
-# TODO 06 — Security and Cryptography
+# TODO-06: Security and Cryptography
 
-**Status:** Not started
+**Status:** Future stage; not execution-ready
 **Related PRD:** `../prd/PRD-06-security-and-cryptography.md`
 
-- [ ] Complete and approve the related PRD
-- [ ] Define the acceptance tests
-- [ ] Implement only after approval
-- [ ] Run the relevant tests
-- [ ] Review the result before moving forward
+No implementation task is authorized until the Stage 6 PRD, decisions, PLAN section, traceability, and verification plan are completed and approved.
