@@ -151,6 +151,10 @@ activemq-data/
 .env
 .envrc
 .venv
+credentials.json
+token.json
+config/game.toml
+config/private/
 env/
 venv/
 ENV/
