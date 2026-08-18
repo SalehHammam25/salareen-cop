@@ -4,7 +4,7 @@ Cop peer for **Distributed Cops-and-Robbers over a Peer-to-Peer Network**, speci
 
 ## Current status
 
-Documentation alignment is in progress for Stages 1-5. No application code, dependencies, runtime configuration, server, tunnel, or test suite exists yet. Stages 6-7 remain future work.
+Stage 1 deterministic Base Logic is implemented on its focused feature branch. Stages 2-7 remain future work; no networking, strategy, language provider, tunnel, cryptography, GUI, or reporting runtime exists.
 
 ## Authority
 
@@ -36,4 +36,4 @@ Never commit credentials, tokens, assigned tunnel domains, private peer endpoint
 
 ## Development status
 
-There is currently nothing to install or run. Future implementation will use Python with `uv`, but this documentation branch intentionally adds no dependency or runtime files.
+Install the locked Python 3.12 development environment with `uv sync --frozen`, then run `uv run pytest -q`. Stage 1 consumes the committed shared `config/game.json`; private `config/game.toml` is intentionally absent and ignored.

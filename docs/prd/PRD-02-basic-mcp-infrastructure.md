@@ -53,3 +53,7 @@ Connect independently running cop and thief peers over localhost with symmetric 
 ## Non-goals and blocker
 
 No public tunnel, strategy, scent/language, cryptography, reporting, or remote-blame attribution. Stage 5 owns public transport; Stage 6 owns authentication.
+
+## Live-match composition extension
+
+The exact six-field geometry envelope remains frozen. Separate versioned orchestration tools, response/rejection vocabulary, expected-opponent-role validation, idempotency identity and validation order are defined by the shared live-match contract. Stage 2 owns their transport schemas and deterministic duplicate behavior; production implementation and tests remain pending.

@@ -151,6 +151,10 @@ activemq-data/
 .env
 .envrc
 .venv
+credentials.json
+token.json
+config/game.toml
+config/private/
 env/
 venv/
 ENV/
@@ -216,3 +220,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+.runtime/
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
