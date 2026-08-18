@@ -10,6 +10,7 @@ from .endpoints import validate_endpoint
 from .event_log import EventLog
 from .gameplay import GameplayAdapter
 from .journal import Journal
+from .security_runtime import LiveSecurity
 from .server import build_live_server
 from .session import LiveMatchSession
 
@@ -22,21 +23,32 @@ def main() -> None:
     parser.add_argument("--session-id", default="local-session")
     parser.add_argument("--config", default="config/game.json")
     parser.add_argument("--opponent")
-    parser.add_argument("--scenario", choices=("capture", "barrier_capture", "trapped",
-                        "capture_priority", "survival"),
-                        default="capture")
+    parser.add_argument(
+        "--scenario",
+        choices=(
+            "capture",
+            "barrier_capture",
+            "trapped",
+            "capture_priority",
+            "survival",
+        ),
+        default="capture",
+    )
     args = parser.parse_args()
     if args.opponent:
-        validate_endpoint(args.opponent, mode="local", host="127.0.0.1",
-                          permitted_port=8801)
+        validate_endpoint(
+            args.opponent, mode="local", host="127.0.0.1", permitted_port=8801
+        )
     path = os.environ.get("SALAREEN_COP_JOURNAL", ".runtime/cop-match.sqlite3")
     log_path = os.environ.get("SALAREEN_COP_EVENT_LOG", ".runtime/cop-match.jsonl")
     journal = Journal(path)
     events = EventLog(log_path, "cop", args.game_id, args.session_id)
     saved = journal.get_state(args.game_id, args.session_id, "game_state")
-    gameplay = GameplayAdapter(args.config, saved)
-    session = LiveMatchSession("cop", args.game_id, args.session_id, 1,
-                               journal, gameplay)
+    security = LiveSecurity("cop", args.config, args.game_id, journal, args.session_id)
+    gameplay = GameplayAdapter(args.config, saved, defer=True)
+    session = LiveMatchSession(
+        "cop", args.game_id, args.session_id, 1, journal, gameplay, security
+    )
     session.events = events
     session.action_delay = float(os.environ.get("SALAREEN_ACTION_DELAY", "0"))
     session.crash_after_send = int(os.environ.get("SALAREEN_CRASH_AFTER_SEND", "-1"))
@@ -45,10 +57,12 @@ def main() -> None:
     session.watchdog_timeout = float(os.environ.get("SALAREEN_WATCHDOG_TIMEOUT", "60"))
     session.response_timeout = float(os.environ.get("SALAREEN_RESPONSE_TIMEOUT", "30"))
     session.recovery_mismatch = os.environ.get("SALAREEN_RECOVERY_MISMATCH", "")
-    session.verification_barrier_turn = int(os.environ.get(
-        "SALAREEN_VERIFICATION_BARRIER_TURN", "-1"))
+    session.verification_barrier_turn = int(
+        os.environ.get("SALAREEN_VERIFICATION_BARRIER_TURN", "-1")
+    )
     session.verification_barrier_release = os.environ.get(
-        "SALAREEN_VERIFICATION_BARRIER_RELEASE", ".verification-release")
+        "SALAREEN_VERIFICATION_BARRIER_RELEASE", ".verification-release"
+    )
     events.emit("configured", turn=session.turn_index, phase=session.phase)
     pending = journal.get_state(args.game_id, args.session_id, "pending_action")
     if args.opponent and (saved or pending) and session.phase == "game_initialized":
@@ -64,8 +78,11 @@ def main() -> None:
         return
 
     async def play() -> None:
-        task = asyncio.create_task(server.run_async(
-            transport="http", host=args.host, port=args.port, show_banner=False))
+        task = asyncio.create_task(
+            server.run_async(
+                transport="http", host=args.host, port=args.port, show_banner=False
+            )
+        )
         try:
             await run_autoplay(args.opponent, session, args.scenario)
         finally:
