@@ -36,7 +36,10 @@ def restart(runtime: Path, mode: str, make_peers, canonical) -> dict:
 
 
 def negative(runtime: Path, mode: str, make_peers, canonical) -> dict:
-    cop_env = {"SALAREEN_ACTION_DELAY": "30"}
+    release = runtime / "mismatch.release"
+    cop_env = ({"SALAREEN_VERIFICATION_BARRIER_TURN": "1",
+                "SALAREEN_VERIFICATION_BARRIER_RELEASE": str(release)}
+               if mode == "mismatch" else {"SALAREEN_ACTION_DELAY": "30"})
     if mode == "retry_exhaustion":
         cop_env.update(SALAREEN_MAX_RETRIES="2", SALAREEN_RETRY_BACKOFF="0.05")
     if mode == "watchdog":
@@ -49,12 +52,16 @@ def negative(runtime: Path, mode: str, make_peers, canonical) -> dict:
         start(peers)
         wait_event(thief, "stage4_boundary_complete",
                    correlation="action-0", timeout=60)
+        if mode == "mismatch":
+            wait_event(cop, "strategy_blocked", correlation="action-1", timeout=60)
         thief.stop()
-        wait_event(cop, "paused", timeout=60)
+        if mode != "mismatch":
+            wait_event(cop, "paused", timeout=60)
         if mode == "mismatch":
             thief.extra_env = {"SALAREEN_RECOVERY_MISMATCH": "game_id"}
             thief.start()
             wait_event(thief, "recovery_rejected")
+            release.write_text("release\n", encoding="utf-8")
             wait_exit(thief, 30, fallback=True)
         kind = {"retry_exhaustion": "recovery_exhausted",
                 "watchdog": "watchdog_expired", "mismatch": "message_rejected"}[mode]

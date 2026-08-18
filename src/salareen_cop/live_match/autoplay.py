@@ -11,6 +11,7 @@ from .recovery import bounded_call
 from .session import LiveMatchSession
 from .stage4_wait import wait_boundary
 from .test_strategy import choose
+from .verification_barrier import block_strategy
 
 
 def _event(session: LiveMatchSession, kind: str, correlation: str | None = None,
@@ -115,6 +116,9 @@ async def run_autoplay(url: str, session: LiveMatchSession, scenario: str) -> No
         active = "thief" if session.turn_index % 2 == 0 else "cop"
         if active == session.local_role:
             await wait_boundary(session)
+            await block_strategy(session)
+            if session.phase == "aborted":
+                break
             await asyncio.sleep(getattr(session, "action_delay", 0.0))
             if session.phase == "aborted":
                 break

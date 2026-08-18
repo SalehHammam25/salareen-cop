@@ -88,3 +88,30 @@ family passed five focused runs. Three complete gates passed at
 `live-gate-b2vgdxol` (973.4 s), `live-gate-7ohfkm_i` (993.2 s), and
 `live-gate-tt9qm2dj` (964.3 s), with identical evidence. Status is **candidate
 PASS pending Areen's manual rerun**, not final PASS.
+
+## Deterministic mismatch-boundary correction
+
+Areen's next independent run at `live-gate-2_37ib6t` reopened the gate: every
+scenario individually passed twice, but mismatch canonical evidence differed.
+Repeat 1 rejected after only `action-0` at turn 1; repeat 2 accepted `action-1`
+on thief and rejected at turn 2. The directory remains preserved.
+
+Both repeats had completed and acknowledged `action-0`. The harness observed
+the thief's mandatory Stage 4 completion, stopped only thief, and relied on a
+30-second cop action delay. When that delay ended, cop prepared and retried
+`action-1`. In repeat 1 mismatched resume reached cop first; in repeat 2 the
+in-flight action reached restarted thief first. Production correctly allowed
+the next strategy; the nondeterministic interruption belonged to test support.
+
+Mismatch now uses an opt-in, two-phase verification barrier. After cop consumes
+the action-0 boundary it emits `strategy_blocked(action-1)` before preparation.
+The harness requires both thief `stage4_boundary_complete(action-0)` and this
+cop barrier, stops/restarts thief, waits for its durable mismatch rejection,
+then writes the release signal. The cop MCP server stays responsive through the
+rejection response; normal gameplay and other scenarios do not enable it.
+
+Focused mismatch passed 20/20 at `live-gate-rcz0hfiq` (229.0 s), always with
+actions `[action-0]`, counts cop/thief 1/1, and rejection turn 1. Every recovery
+family then passed 5/5. Complete gates passed at `live-gate-erwjj7b4` (892.0 s),
+`live-gate-dfsl1dn5` (868.7 s), and `live-gate-lxuxvsa0` (860.6 s). Status stays
+**candidate PASS pending Areen's next independent manual rerun**.

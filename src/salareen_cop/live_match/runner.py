@@ -45,6 +45,10 @@ def main() -> None:
     session.watchdog_timeout = float(os.environ.get("SALAREEN_WATCHDOG_TIMEOUT", "60"))
     session.response_timeout = float(os.environ.get("SALAREEN_RESPONSE_TIMEOUT", "30"))
     session.recovery_mismatch = os.environ.get("SALAREEN_RECOVERY_MISMATCH", "")
+    session.verification_barrier_turn = int(os.environ.get(
+        "SALAREEN_VERIFICATION_BARRIER_TURN", "-1"))
+    session.verification_barrier_release = os.environ.get(
+        "SALAREEN_VERIFICATION_BARRIER_RELEASE", ".verification-release")
     events.emit("configured", turn=session.turn_index, phase=session.phase)
     pending = journal.get_state(args.game_id, args.session_id, "pending_action")
     if args.opponent and (saved or pending) and session.phase == "game_initialized":
