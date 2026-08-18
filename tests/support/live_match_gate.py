@@ -3,10 +3,10 @@
 import argparse
 import json
 import tempfile
-import time
 from pathlib import Path
 
-from operator_process import Peer, assert_clean, events, port_open, wait_event
+from operator_process import Peer, assert_clean, events
+from process_diagnostics import wait_ready, wait_success
 from recovery_scenarios import negative, restart, terminal_restart
 
 HERE = Path(__file__).resolve()
@@ -38,13 +38,9 @@ def make_peers(runtime: Path, scenario: str, envs=None) -> tuple[Peer, Peer]:
 def start(peers: tuple[Peer, Peer]) -> None:
     thief, cop = peers
     thief.start()
-    wait_event(thief, "server_ready")
-    deadline = time.monotonic() + 3
-    while not port_open(8801) and time.monotonic() < deadline:
-        time.sleep(0.02)
-    assert port_open(8801)
+    wait_ready(thief)
     cop.start()
-    wait_event(cop, "server_ready")
+    wait_ready(cop)
 
 
 def canonical(peers: tuple[Peer, Peer]) -> dict:
@@ -73,7 +69,7 @@ def normal(runtime: Path, scenario: str) -> dict:
     peers = make_peers(runtime, scenario)
     try:
         start(peers)
-        assert all(peer.wait_exit(120) == 0 for peer in peers)
+        wait_success(peers, 120)
         result = canonical(peers)
         expected = "thief_survival" if scenario == "survival" else "cop_capture"
         assert result["terminal"] == expected
@@ -116,7 +112,11 @@ def main() -> None:
                                            for run in range(args.repeat)]
     finally:
         print(f"runtime={base}")
-    assert all(values[1:] == values[:-1] for values in outputs.values())
+    mismatches = {name: values for name, values in outputs.items()
+                  if values[1:] != values[:-1]}
+    if mismatches:
+        raise AssertionError("canonical mismatch:\n" + json.dumps(
+            mismatches, indent=2, sort_keys=True))
     print(json.dumps({key: value[0] for key, value in outputs.items()}, sort_keys=True))
 
 

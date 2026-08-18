@@ -32,6 +32,7 @@ class Peer:
     config: Path
     extra_env: dict[str, str] = field(default_factory=dict)
     process: subprocess.Popen | None = None
+    generation: int = 0
 
     @property
     def journal(self) -> Path:
@@ -41,7 +42,27 @@ class Peer:
     def log(self) -> Path:
         return self.runtime / f"{self.role}.jsonl"
 
+    @property
+    def stdout_path(self) -> Path:
+        return self.runtime / f"{self.role}-{self.generation}.stdout.log"
+
+    @property
+    def stderr_path(self) -> Path:
+        return self.runtime / f"{self.role}-{self.generation}.stderr.log"
+
+    @property
+    def pid(self) -> int | None:
+        return None if self.process is None else self.process.pid
+
+    @property
+    def exit_code(self) -> int | None:
+        return None if self.process is None else self.process.poll()
+
     def start(self) -> None:
+        if self.process and self.process.poll() is None:
+            raise RuntimeError(f"{self.role} process is already running")
+        wait_port_closed(PORTS[self.role])
+        self.generation += 1
         package = f"salareen_{self.role}"
         other = "cop" if self.role == "thief" else "thief"
         python = self.repo / ".venv" / "Scripts" / "python.exe"
@@ -54,38 +75,39 @@ class Peer:
         prefix = f"SALAREEN_{self.role.upper()}"
         env[f"{prefix}_JOURNAL"] = str(self.journal)
         env[f"{prefix}_EVENT_LOG"] = str(self.log)
-        env.update({"SALAREEN_MAX_RETRIES": "20", "SALAREEN_RETRY_BACKOFF": "0.1"})
+        env.update({"SALAREEN_MAX_RETRIES": "3", "SALAREEN_RETRY_BACKOFF": "0.1",
+                    "SALAREEN_RESPONSE_TIMEOUT": "3"})
         env.update(self.extra_env)
-        self.process = subprocess.Popen(command, cwd=self.repo, env=env,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        with self.stdout_path.open("a", encoding="utf-8") as stdout, (
+                self.stderr_path.open("a", encoding="utf-8")) as stderr:
+            self.process = subprocess.Popen(command, cwd=self.repo, env=env,
+                                            stdout=stdout, stderr=stderr)
 
-    def stop(self, grace: float = 2) -> None:
+    def stop(self, grace: float = 2) -> str:
         if not self.process or self.process.poll() is not None:
-            return
+            return "already_exited"
         self.process.terminate()
         try:
             self.process.wait(grace)
+            action = "terminated"
         except subprocess.TimeoutExpired:
             self.process.kill()
             self.process.wait(2)
+            action = "killed"
+        wait_port_closed(PORTS[self.role])
+        return action
 
     def wait_exit(self, timeout: float = 30) -> int:
         assert self.process
         return self.process.wait(timeout)
 
 
-def wait_event(peer: Peer, kind: str, timeout: float = 15,
-               correlation: str | None = None) -> dict:
+def wait_port_closed(port: int, timeout: float = 5) -> None:
     deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        for item in events(peer.log):
-            if item["event_type"] == kind and (
-                    correlation is None or item["correlation_id"] == correlation):
-                return item
-        if peer.process and peer.process.poll() is not None:
-            raise RuntimeError(f"{peer.role} exited before {kind}")
+    while port_open(port) and time.monotonic() < deadline:
         time.sleep(0.02)
-    raise TimeoutError(f"{peer.role} did not emit {kind}")
+    if port_open(port):
+        raise TimeoutError(f"port {port} remained bound")
 
 
 def assert_clean(peers: tuple[Peer, Peer]) -> None:

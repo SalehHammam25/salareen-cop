@@ -27,3 +27,40 @@ The cop now waits for both final Stage 4 messages before reconciliation.
 Remaining: authorized ngrok/public endpoint checks, two-computer symmetric MCP
 calls with Saleh, one reconciled remote match, redacted remote evidence, PR
 review/merge, and Stage 6. These remain unchecked.
+
+## Windows manual-failure correction
+
+Areen reported a manual failure on 2026-08-18 at the old combined restart
+assertion, with runtime `live-gate-j9l3y4fs`. That directory was not present in
+the shared workspace when diagnosis began, and the old harness discarded
+stdout/stderr, so the original failing peer cannot be recovered from evidence.
+The failure remains recorded and is not treated as a pass.
+
+Independent stress runs reproduced the same assertion family. In retained run
+`live-gate-2iathnzs`, both peers timed out after `terminal_agreed`: cop never
+completed the next unbounded score RPC and thief waited for shutdown. Other
+retained adversarial runs exposed a Windows `WinError 10054` while observing
+peer closure, recovery phase overwrite during an in-flight action, premature
+restart before the receiver emitted `paused`, and schedule-dependent recovery
+event turns/actions.
+
+Corrections:
+
+- every FastMCP operation now has an application timeout and terminal, score,
+  shutdown, and capture RPCs use bounded identical-message retries;
+- an aborted session cannot be changed back to paused by an in-flight retry;
+- terminal peers use shutdown agreement plus observed peer-port closure, with
+  Windows connection reset treated as closure;
+- restarts require the receiver's structured `paused` event and confirmed old
+  port release;
+- recovery event turns are pinned to the negotiated resume boundary;
+- each process generation captures stdout/stderr, and failures report role,
+  PID, exit code, timeout, final event, output tails, bound port, and targeted
+  terminate/kill/reap action.
+
+Final corrected evidence: acknowledged restart passed 5 consecutive runs;
+lost-ack, mismatch, retry exhaustion, watchdog, and terminal restart each
+passed two consecutive runs. Two complete independent commands passed using
+fresh roots `live-gate-yswgq_ns` (790.6 s) and `live-gate-37n6x7n3` (789.6 s).
+Afterward ports 8801/8802 and exact peer-runner process counts were both zero.
+The local-only gate is PASS again on this Windows environment.
