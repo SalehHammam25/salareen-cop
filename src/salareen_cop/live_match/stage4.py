@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from salareen_cop.base_logic.state_types import Board
-from salareen_cop.belief.models import BeliefFallback, BeliefUpdated
+from salareen_cop.belief.models import BeliefFallback, BeliefMap, BeliefUpdated
 from salareen_cop.belief.prior import uniform_prior
 from salareen_cop.belief.target import select_target
 from salareen_cop.belief.updates import update_from_language, update_from_scent
@@ -30,6 +30,7 @@ class Stage4Boundary:
         self.belief = uniform_prior(board)
         self.service = VerbalService(
             TemplateProvider(), private.every_n_steps, private.timeout_seconds)
+        self.every_n_steps = private.every_n_steps
         self.last_scent_turn = -1
         self.last_hint_turn = -1
 
@@ -78,3 +79,26 @@ class Stage4Boundary:
 
     def next_target(self):
         return select_target(self.belief)
+
+    def requires_hint(self, turn: int) -> bool:
+        return turn % self.every_n_steps == 0
+
+    def snapshot(self) -> dict[str, Any]:
+        return {"consumed": self.ledger.consumed,
+                "last_scent_turn": self.last_scent_turn,
+                "last_hint_turn": self.last_hint_turn,
+                "every_n_steps": self.every_n_steps,
+                "belief": [[str(value) for value in row]
+                           for row in self.belief.probabilities]}
+
+    def restore(self, data: dict[str, Any] | None) -> None:
+        if not data:
+            return
+        if data["every_n_steps"] != self.every_n_steps:
+            raise ValueError("language cadence changed during recovery")
+        self.ledger = TokenLedger(self.ledger.budget, data["consumed"])
+        self.last_scent_turn = data["last_scent_turn"]
+        self.last_hint_turn = data["last_hint_turn"]
+        values = tuple(tuple(Decimal(value) for value in row)
+                       for row in data["belief"])
+        self.belief = BeliefMap(self.belief.board, values)

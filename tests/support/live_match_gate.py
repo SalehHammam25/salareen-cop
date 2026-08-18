@@ -5,6 +5,7 @@ import json
 import tempfile
 from pathlib import Path
 
+from gate_progress import run_case
 from operator_process import Peer, assert_clean, events
 from process_diagnostics import wait_ready, wait_success
 from recovery_scenarios import negative, restart, terminal_restart
@@ -88,30 +89,32 @@ def main() -> None:
     outputs: dict[str, list[dict]] = {}
     (ROOT / ".runtime").mkdir(exist_ok=True)
     base = Path(tempfile.mkdtemp(prefix="live-gate-", dir=ROOT / ".runtime"))
+    print(f"runtime={base}", flush=True)
     try:
         for name in scenarios:
             if args.scenario and args.scenario != name:
                 continue
-            outputs[name] = [normal(base / f"{name}-{run}", name)
-                             for run in range(args.repeat)]
+            outputs[name] = [run_case(name, run, lambda run=run, name=name:
+                normal(base / f"{name}-{run}", name)) for run in range(args.repeat)]
         for name in ("ack_restart", "lost_ack"):
             if args.scenario and args.scenario != name:
                 continue
-            outputs[name] = [restart(base / f"{name}-{run}", name,
-                                     make_peers, canonical)
-                             for run in range(args.repeat)]
+            outputs[name] = [run_case(name, run, lambda run=run, name=name:
+                restart(base / f"{name}-{run}", name, make_peers, canonical))
+                for run in range(args.repeat)]
         for name in ("mismatch", "retry_exhaustion", "watchdog"):
             if args.scenario and args.scenario != name:
                 continue
-            outputs[name] = [negative(base / f"{name}-{run}", name,
-                                      make_peers, canonical)
-                             for run in range(args.repeat)]
+            outputs[name] = [run_case(name, run, lambda run=run, name=name:
+                negative(base / f"{name}-{run}", name, make_peers, canonical))
+                for run in range(args.repeat)]
         if not args.scenario or args.scenario == "terminal_restart":
-            outputs["terminal_restart"] = [terminal_restart(base / f"terminal-{run}",
-                                                            make_peers, canonical)
-                                           for run in range(args.repeat)]
+            outputs["terminal_restart"] = [run_case("terminal_restart", run,
+                lambda run=run: terminal_restart(base / f"terminal-{run}",
+                                                  make_peers, canonical))
+                for run in range(args.repeat)]
     finally:
-        print(f"runtime={base}")
+        print(f"runtime={base}", flush=True)
     mismatches = {name: values for name, values in outputs.items()
                   if values[1:] != values[:-1]}
     if mismatches:

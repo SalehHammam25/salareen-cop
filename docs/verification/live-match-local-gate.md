@@ -64,3 +64,27 @@ passed two consecutive runs. Two complete independent commands passed using
 fresh roots `live-gate-yswgq_ns` (790.6 s) and `live-gate-37n6x7n3` (789.6 s).
 Afterward ports 8801/8802 and exact peer-runner process counts were both zero.
 The local-only gate is PASS again on this Windows environment.
+
+## Second independent Windows failure and candidate correction
+
+Areen reopened the gate after `terminal_restart` failed in retained runtime
+`live-gate-95gu2_ka/terminal-0`, waiting for optional `hint-11`. Both journals
+agreed at turn 10: cop had applied `action-9`; thief held pending `action-10`.
+Thief had sent scent/hint 10 and cop received them. Resume had not been tried.
+The fixed 30-second wait expired during valid Stage 4 progress, while the old
+one-second Stage 4 wait also incorrectly persisted `paused_recovering`.
+
+The correction persists/restores scent, belief, cadence, last scent/hint turns,
+and token consumption; bounds Stage 4 calls; guards recovery phase changes by
+epoch; and restores active phase only at the mandatory boundary. Terminal and
+recovery interruptions now wait for `stage4_boundary_complete`, never optional
+hints. Flushed progress reports runtime/repeat/scenario/status/time; failures
+include exact command, PID, exit, timeout, last event, output tails, port, and
+targeted cleanup.
+
+All manual and stress failure directories remain preserved. Final focused
+`terminal_restart` passed 20/20 at `live-gate-c0fbrjz1` (862.9 s). Each recovery
+family passed five focused runs. Three complete gates passed at
+`live-gate-b2vgdxol` (973.4 s), `live-gate-7ohfkm_i` (993.2 s), and
+`live-gate-tt9qm2dj` (964.3 s), with identical evidence. Status is **candidate
+PASS pending Areen's manual rerun**, not final PASS.

@@ -17,6 +17,7 @@ def snapshot(peer, *, timed_out: bool, cleanup: str = "none") -> dict:
     history = events(peer.log)
     last = history[-1] if history else None
     return {"role": peer.role, "pid": peer.pid, "exit_code": peer.exit_code,
+            "command": peer.command,
             "timed_out": timed_out, "last_event": last,
             "stdout_tail": tail(peer.stdout_path),
             "stderr_tail": tail(peer.stderr_path),
@@ -42,7 +43,7 @@ def wait_success(peers, timeout: float) -> None:
         report, indent=2, sort_keys=True))
 
 
-def wait_exit(peer, timeout: float) -> int:
+def wait_exit(peer, timeout: float, *, fallback: bool = False) -> int:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if peer.exit_code is not None:
@@ -50,6 +51,9 @@ def wait_exit(peer, timeout: float) -> int:
         time.sleep(0.02)
     action = peer.stop()
     report = snapshot(peer, timed_out=True, cleanup=action)
+    if fallback:
+        print("peer_cleanup=" + json.dumps(report, sort_keys=True), flush=True)
+        return peer.exit_code if peer.exit_code is not None else -1
     raise AssertionError("peer exit timeout:\n" + json.dumps(
         report, indent=2, sort_keys=True))
 
@@ -72,8 +76,14 @@ def wait_event(peer, kind: str, timeout: float = 15,
                          json.dumps(report, indent=2, sort_keys=True))
 
 
-def wait_ready(peer, timeout: float = 10) -> None:
-    wait_event(peer, "server_ready", timeout)
+def wait_ready(peer, timeout: float = 120) -> None:
+    try:
+        wait_event(peer, "server_ready", timeout)
+    except AssertionError as error:
+        cleanup = peer.stop()
+        report = snapshot(peer, timed_out=True, cleanup=cleanup)
+        raise AssertionError("server readiness failed:\n" + json.dumps(
+            report, indent=2, sort_keys=True)) from error
     deadline = time.monotonic() + timeout
     consecutive = 0
     while time.monotonic() < deadline:
