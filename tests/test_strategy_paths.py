@@ -44,9 +44,7 @@ def test_barrier_aware_shortest_path(accepted_config, rules) -> None:
         cop=Coordinate(3, 3),
         barriers=(Coordinate(2, 3), Coordinate(3, 4)),
     )
-    result = StrategyGateway(rules, BlindCopPolicy()).decide(
-        state, Coordinate(2, 4)
-    )
+    result = StrategyGateway(rules, BlindCopPolicy()).decide(state, Coordinate(2, 4))
     assert isinstance(result, ValidatedDecision)
     assert result.state.positions.cop == Coordinate(4, 3)
 
@@ -60,9 +58,7 @@ def test_barrier_aware_shortest_path(accepted_config, rules) -> None:
         (Coordinate(4, 4), "S"),
     ],
 )
-def test_all_symmetric_ties_are_stable(
-    accepted_config, target, expected
-) -> None:
+def test_all_symmetric_ties_are_stable(accepted_config, target, expected) -> None:
     state = state_with(accepted_config, cop=Coordinate(3, 3))
     result = BlindCopPolicy().propose(snapshot_for(state, target))
     assert isinstance(result, ProposedAction)

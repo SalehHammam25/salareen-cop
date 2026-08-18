@@ -39,9 +39,17 @@ def test_snapshot_is_frozen_and_restricted(initial_game) -> None:
 
 def test_strategy_has_no_forbidden_dependencies() -> None:
     forbidden = (
-        "fastmcp", "mcp", "salareen_cop.mcp_transport", "salareen_cop.scent",
-        "salareen_cop.language", "salareen_cop.belief", "random", "time",
-        "socket", "httpx", "requests",
+        "fastmcp",
+        "mcp",
+        "salareen_cop.mcp_transport",
+        "salareen_cop.scent",
+        "salareen_cop.language",
+        "salareen_cop.belief",
+        "random",
+        "time",
+        "socket",
+        "httpx",
+        "requests",
     )
     violations = {
         (path, module)

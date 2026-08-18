@@ -73,7 +73,9 @@ def test_plugin_failure_uses_visible_validated_fallback(
 
 def test_fallback_is_repeatable(tmp_path, monkeypatch, rules, initial_game) -> None:
     selected = selection(
-        tmp_path, monkeypatch, "repeat_cop_plugin",
+        tmp_path,
+        monkeypatch,
+        "repeat_cop_plugin",
         "    def propose(self, snapshot):\n        raise ValueError('private')",
     )
     gateway = StrategyGateway(rules, selected.policy)

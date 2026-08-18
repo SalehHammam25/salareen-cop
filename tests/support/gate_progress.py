@@ -11,10 +11,13 @@ def run_case[T](name: str, repeat: int, operation: Callable[[], T]) -> T:
         result = operation()
     except BaseException:
         elapsed = time.monotonic() - started
-        print(f"repeat={repeat + 1} scenario={name} FAIL elapsed={elapsed:.3f}s",
-              flush=True)
+        print(
+            f"repeat={repeat + 1} scenario={name} FAIL elapsed={elapsed:.3f}s",
+            flush=True,
+        )
         raise
     elapsed = time.monotonic() - started
-    print(f"repeat={repeat + 1} scenario={name} PASS elapsed={elapsed:.3f}s",
-          flush=True)
+    print(
+        f"repeat={repeat + 1} scenario={name} PASS elapsed={elapsed:.3f}s", flush=True
+    )
     return result

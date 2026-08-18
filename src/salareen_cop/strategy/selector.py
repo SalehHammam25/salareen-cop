@@ -49,7 +49,9 @@ def _load(reference: object):
     try:
         instance = candidate()
     except Exception as error:
-        return None, FallbackReason(PluginError.CONSTRUCTOR_FAILED, type(error).__name__)
+        return None, FallbackReason(
+            PluginError.CONSTRUCTOR_FAILED, type(error).__name__
+        )
     if not callable(getattr(instance, "propose", None)):
         return None, FallbackReason(PluginError.INVALID_INTERFACE)
     return instance, None

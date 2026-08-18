@@ -26,9 +26,7 @@ def test_exact_maximum_tie_is_row_major(initial_game) -> None:
     assert select_target(belief) == Coordinate(1, 1)
 
 
-def test_highest_thief_belief_becomes_restricted_target(
-    rules, initial_game
-) -> None:
+def test_highest_thief_belief_becomes_restricted_target(rules, initial_game) -> None:
     zero = Decimal("0")
     rows = [[zero] * 7 for _ in range(7)]
     rows[2][2] = Decimal("1")

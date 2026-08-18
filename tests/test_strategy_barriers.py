@@ -24,9 +24,7 @@ def state_with(config, *, cop, thief, barriers=(), usage=None):
 
 
 def test_legal_containment_barrier_is_validated(accepted_config, rules) -> None:
-    state = state_with(
-        accepted_config, cop=Coordinate(3, 3), thief=Coordinate(6, 6)
-    )
+    state = state_with(accepted_config, cop=Coordinate(3, 3), thief=Coordinate(6, 6))
     target = Coordinate(2, 4)
     result = StrategyGateway(rules, ContainmentBarrierPolicy()).decide(state, target)
     assert isinstance(result, ValidatedDecision)
@@ -36,9 +34,7 @@ def test_legal_containment_barrier_is_validated(accepted_config, rules) -> None:
 
 
 def test_barrier_tie_order_is_repeatable(accepted_config) -> None:
-    state = state_with(
-        accepted_config, cop=Coordinate(3, 3), thief=Coordinate(6, 6)
-    )
+    state = state_with(accepted_config, cop=Coordinate(3, 3), thief=Coordinate(6, 6))
     snapshot = snapshot_for(state, Coordinate(2, 4))
     first = ContainmentBarrierPolicy().propose(snapshot)
     assert isinstance(first, ProposedAction)
@@ -52,9 +48,7 @@ def test_quota_and_no_candidate_are_explicit(accepted_config) -> None:
         thief=Coordinate(6, 6),
         usage=accepted_config.movement.max_barriers,
     )
-    result = ContainmentBarrierPolicy().propose(
-        snapshot_for(state, Coordinate(2, 2))
-    )
+    result = ContainmentBarrierPolicy().propose(snapshot_for(state, Coordinate(2, 2)))
     assert result == DecisionFailure(DecisionError.NO_SAFE_BARRIER)
 
 
@@ -67,9 +61,7 @@ def test_existing_and_off_board_candidates_are_never_proposed(
         thief=Coordinate(6, 6),
         barriers=(Coordinate(0, 1),),
     )
-    result = ContainmentBarrierPolicy().propose(
-        snapshot_for(state, Coordinate(1, 1))
-    )
+    result = ContainmentBarrierPolicy().propose(snapshot_for(state, Coordinate(1, 1)))
     assert isinstance(result, DecisionFailure)
 
 
@@ -81,18 +73,14 @@ def test_self_containing_candidate_is_refused(accepted_config) -> None:
         thief=Coordinate(6, 6),
         barriers=barriers,
     )
-    result = ContainmentBarrierPolicy().propose(
-        snapshot_for(state, Coordinate(1, 1))
-    )
+    result = ContainmentBarrierPolicy().propose(snapshot_for(state, Coordinate(1, 1)))
     assert result == DecisionFailure(DecisionError.UNREACHABLE_TARGET)
 
 
 def test_hidden_true_thief_collision_cannot_bypass_rules(
     accepted_config, rules
 ) -> None:
-    state = state_with(
-        accepted_config, cop=Coordinate(3, 3), thief=Coordinate(2, 3)
-    )
+    state = state_with(accepted_config, cop=Coordinate(3, 3), thief=Coordinate(2, 3))
     before = state
     result = StrategyGateway(rules, ContainmentBarrierPolicy()).decide(
         state, Coordinate(2, 4)
