@@ -72,3 +72,14 @@ Do not silently resolve the series count conflict (`num_games: 1` example versus
 ## Live-match composition recovery plan
 
 The Stage 1-5 components are not yet a playable system. ADR-006 and `docs/contracts/live-match-orchestration-v1.md` define the production composition. Implementation order is shared schemas/fixtures, expected-role and endpoint convergence, cop runner/adapters, thief runner compatibility, exactly-once/recovery wiring, deterministic localhost matches, then authorized remote proof. Every runner remains peer-local; no central coordinator is allowed. Stage 6 security primitives and Stage 7 reporting remain excluded.
+
+## Stage 6-7 execution addendum
+
+Implement the minimum mandatory security path symmetrically on a dedicated
+feature branch: shared canonical contracts first, then Ed25519 configuration and
+Step-0 signatures, commit/acknowledge/reveal, capture verification, chained logs,
+and final nonce audit. After focused security tests pass, add six-game series
+artifacts, exact peer-result agreement, verified replay, and a privacy-safe view
+model. Preserve all earlier behavior and run full suites plus the live/security
+gate before local commits. External key exchange and remote peer access are
+recorded separately and do not block local implementation.
