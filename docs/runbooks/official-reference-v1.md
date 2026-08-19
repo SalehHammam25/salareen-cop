@@ -6,6 +6,15 @@ single port at a stable public HTTPS URL whose path is `/mcp`.
 
 Run from the workspace containing both `salareen-cop` and `salareen-thief`:
 
+Bring up the endpoint before the opponent publishes its URL:
+
+```powershell
+uv run --project salareen-cop python -m salareen_cop.official.runner
+```
+
+After the opponent supplies its endpoint, stop only the local runner, keep the stable
+tunnel allocated, and restart the runner on the same port with the series arguments:
+
 ```powershell
 uv run --project salareen-cop python -m salareen_cop.official.runner `
   --opponent 'https://opponent.example/mcp' `

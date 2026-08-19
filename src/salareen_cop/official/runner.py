@@ -37,9 +37,9 @@ def _commit(value: str) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--opponent", required=True, help="opponent's stable https://.../mcp URL")
-    parser.add_argument("--police-commit", required=True, type=_commit)
-    parser.add_argument("--thief-commit", required=True, type=_commit)
+    parser.add_argument("--opponent", help="opponent's stable https://.../mcp URL")
+    parser.add_argument("--police-commit", type=_commit)
+    parser.add_argument("--thief-commit", type=_commit)
     parser.add_argument("--opponent-token")
     parser.add_argument("--incoming-token")
     parser.add_argument("--host", default="127.0.0.1")
@@ -49,19 +49,23 @@ def main() -> None:
     args = parser.parse_args()
 
     mailboxes = OfficialMailboxes()
-    transport = OfficialTransport(args.opponent, mailboxes, args.opponent_token)
-    thief_engine = _thief_engine()
+    series = None
+    if args.opponent:
+        if not args.police_commit or not args.thief_commit:
+            parser.error("--police-commit and --thief-commit are required with --opponent")
+        transport = OfficialTransport(args.opponent, mailboxes, args.opponent_token)
+        thief_engine = _thief_engine()
 
-    def factory(role: str, number: int, commit: str):
-        cls = CopEngine if role == "police" else thief_engine
-        return cls(number, commit)
+        def factory(role: str, number: int, commit: str):
+            cls = CopEngine if role == "police" else thief_engine
+            return cls(number, commit)
 
-    series = OfficialSeries(
-        transport,
-        mailboxes,
-        factory,
-        {"police": args.police_commit, "thief": args.thief_commit},
-    )
+        series = OfficialSeries(
+            transport,
+            mailboxes,
+            factory,
+            {"police": args.police_commit, "thief": args.thief_commit},
+        )
 
     def play() -> None:
         time.sleep(0.5)
@@ -73,7 +77,8 @@ def main() -> None:
             payload = {"error": type(error).__name__, "detail": str(error)}
         status.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
-    threading.Thread(target=play, daemon=True, name="official-series").start()
+    if series is not None:
+        threading.Thread(target=play, daemon=True, name="official-series").start()
     server = build_unified_server(mailboxes, args.incoming_token)
     server.run(transport="http", host=args.host, port=args.port)
 
