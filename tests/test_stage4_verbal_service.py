@@ -12,7 +12,9 @@ from salareen_cop.scent.config import load_language_scent_config
 
 
 class FakeProvider:
-    def __init__(self, reply: ProviderReply | None = None, error: Exception | None = None):
+    def __init__(
+        self, reply: ProviderReply | None = None, error: Exception | None = None
+    ):
         self.reply = reply or ProviderReply("near the river", 2, 3)
         self.error = error
         self.last_request: VerbalRequest | None = None
@@ -121,9 +123,7 @@ def test_prompt_injection_remains_text_and_cannot_apply_a_move() -> None:
 def test_provider_prompt_prohibits_and_redacts_direct_coordinates() -> None:
     provider = FakeProvider()
     service = VerbalService(provider, 1, 1)
-    coordinate_request = VerbalRequest(
-        "game-1", 2, "New York", "target \u0663,\u0664"
-    )
+    coordinate_request = VerbalRequest("game-1", 2, "New York", "target \u0663,\u0664")
     asyncio.run(service.generate(coordinate_request, TokenLedger(10), 15))
     assert provider.last_request is not None
     assert "Never provide direct coordinates" in provider.last_request.instruction

@@ -33,25 +33,19 @@ class Exploding:
 
 
 def test_wrong_role_rejected_without_mutation(rules, initial_game) -> None:
-    result = StrategyGateway(rules, WrongRole()).decide(
-        initial_game, Coordinate(2, 2)
-    )
+    result = StrategyGateway(rules, WrongRole()).decide(initial_game, Coordinate(2, 2))
     assert result == DecisionFailure(DecisionError.ILLEGAL_PROPOSAL)
     assert initial_game.positions.cop == Coordinate(0, 0)
 
 
 def test_move_and_barrier_cannot_bypass_base_logic(rules, initial_game) -> None:
     for policy in (Diagonal(), IllegalBarrier()):
-        result = StrategyGateway(rules, policy).decide(
-            initial_game, Coordinate(2, 2)
-        )
+        result = StrategyGateway(rules, policy).decide(initial_game, Coordinate(2, 2))
         assert result == DecisionFailure(DecisionError.ILLEGAL_PROPOSAL)
         assert initial_game.positions.cop == Coordinate(0, 0)
 
 
 def test_runtime_message_is_sanitized(rules, initial_game) -> None:
-    result = StrategyGateway(rules, Exploding()).decide(
-        initial_game, Coordinate(2, 2)
-    )
+    result = StrategyGateway(rules, Exploding()).decide(initial_game, Coordinate(2, 2))
     assert result == DecisionFailure(DecisionError.POLICY_EXCEPTION, "RuntimeError")
     assert "private-coordinate" not in str(result)

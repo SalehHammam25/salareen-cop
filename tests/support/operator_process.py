@@ -67,24 +67,46 @@ class Peer:
         package = f"salareen_{self.role}"
         other = "cop" if self.role == "thief" else "thief"
         python = self.repo / ".venv" / "Scripts" / "python.exe"
-        command = [str(python), "-m", f"{package}.live_match.runner",
-                   "--host", "127.0.0.1", "--port", str(PORTS[self.role]),
-                   "--opponent", f"http://127.0.0.1:{PORTS[other]}/mcp",
-                   "--game-id", "gate-game", "--session-id", "gate-session",
-                   "--scenario", self.scenario, "--config", str(self.config)]
+        command = [
+            str(python),
+            "-m",
+            f"{package}.live_match.runner",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(PORTS[self.role]),
+            "--opponent",
+            f"http://127.0.0.1:{PORTS[other]}/mcp",
+            "--game-id",
+            "gate-game",
+            "--session-id",
+            "gate-session",
+            "--scenario",
+            self.scenario,
+            "--config",
+            str(self.config),
+        ]
         self.command = command
         env = os.environ.copy()
         prefix = f"SALAREEN_{self.role.upper()}"
         env[f"{prefix}_JOURNAL"] = str(self.journal)
         env[f"{prefix}_EVENT_LOG"] = str(self.log)
-        env.update({"SALAREEN_MAX_RETRIES": "20", "SALAREEN_RETRY_BACKOFF": "0.1",
-                    "SALAREEN_RESPONSE_TIMEOUT": "3",
-                    "SALAREEN_WATCHDOG_TIMEOUT": "120"})
+        env.update(
+            {
+                "SALAREEN_MAX_RETRIES": "20",
+                "SALAREEN_RETRY_BACKOFF": "0.1",
+                "SALAREEN_RESPONSE_TIMEOUT": "3",
+                "SALAREEN_WATCHDOG_TIMEOUT": "120",
+            }
+        )
         env.update(self.extra_env)
-        with self.stdout_path.open("a", encoding="utf-8") as stdout, (
-                self.stderr_path.open("a", encoding="utf-8")) as stderr:
-            self.process = subprocess.Popen(command, cwd=self.repo, env=env,
-                                            stdout=stdout, stderr=stderr)
+        with (
+            self.stdout_path.open("a", encoding="utf-8") as stdout,
+            self.stderr_path.open("a", encoding="utf-8") as stderr,
+        ):
+            self.process = subprocess.Popen(
+                command, cwd=self.repo, env=env, stdout=stdout, stderr=stderr
+            )
 
     def stop(self, grace: float = 2) -> str:
         if not self.process or self.process.poll() is not None:
@@ -117,7 +139,11 @@ def assert_clean(peers: tuple[Peer, Peer]) -> None:
     for peer in peers:
         peer.stop()
     deadline = time.monotonic() + 3
-    while time.monotonic() < deadline and any(port_open(port) for port in PORTS.values()):
+    while time.monotonic() < deadline and any(
+        port_open(port) for port in PORTS.values()
+    ):
         time.sleep(0.05)
     assert not any(port_open(port) for port in PORTS.values())
-    assert all(peer.process is None or peer.process.poll() is not None for peer in peers)
+    assert all(
+        peer.process is None or peer.process.poll() is not None for peer in peers
+    )

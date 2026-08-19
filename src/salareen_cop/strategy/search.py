@@ -40,9 +40,7 @@ def shortest_choices(
     for choice in MOVEMENT_ORDER:
         target = target_for(snapshot.cop, choice)
         if (
-            validate_target(
-                snapshot.board, snapshot.cop, target, snapshot.barriers
-            )
+            validate_target(snapshot.board, snapshot.cop, target, snapshot.barriers)
             is None
             and target in distances
         ):

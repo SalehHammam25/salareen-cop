@@ -31,7 +31,9 @@ def test_default_private_selection() -> None:
 
 def test_valid_private_plugin_selection(tmp_path, monkeypatch) -> None:
     name = plugin_module(
-        tmp_path, monkeypatch, "good_cop_plugin",
+        tmp_path,
+        monkeypatch,
+        "good_cop_plugin",
         "class Good:\n    def propose(self, snapshot):\n        return None\n",
     )
     selected = select_strategy(private_config(tmp_path, f"{name}:Good"))
