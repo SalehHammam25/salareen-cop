@@ -35,3 +35,22 @@ ngrok http 8799 --url "https://$env:SALAREEN_NGROK_DOMAIN"
 Keep the runner and tunnel alive through the final `series_consensus` exchange. The
 series result is written to `.runtime/official-series-result.json`; secrets and private
 positions are not written there.
+
+## Counted result reporting
+
+For a counted match, add an empty, match-specific output directory and the stable public
+MCP URL:
+
+```powershell
+uv run --project salareen-cop python -m salareen_cop.official.runner `
+  --opponent 'https://opponent.example/mcp' `
+  --police-commit '<Police 40-character HEAD>' `
+  --thief-commit '<Thief 40-character HEAD>' `
+  --public-mcp-url 'https://salareen.example/mcp' `
+  --counted-result-dir '.runtime/counted/<match-label>'
+```
+
+This writes `result_<game_id>.json` only after all six games and final consensus. The
+writer validates the full counted schema and refuses to overwrite an existing counted
+artifact. The reporting fields are additive and never enter the
+`official_reference_v1` consensus preimage.

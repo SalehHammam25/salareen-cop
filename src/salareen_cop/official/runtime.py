@@ -1,6 +1,7 @@
 """One official pushed-turn mini-game with mutual audit."""
 
 import time
+from datetime import UTC, datetime
 
 from .delivery import DeliveryInbox, EquivocationError, ReorderWindowError
 from .settlement import verify_records
@@ -17,14 +18,22 @@ class SubGameRuntime:
         self.result: str | None = None
 
     def _send_turn(self, *, hold: bool = False, incoming: dict | None = None) -> None:
-        message = self.engine.take_turn(incoming, hold=hold) if hold else self.engine.take_turn(incoming)
+        message = (
+            self.engine.take_turn(incoming, hold=hold)
+            if hold
+            else self.engine.take_turn(incoming)
+        )
         self.transport.send_turn(message)
         if message.get("win_claim"):
             self.result = "survival"
 
     def _terminal_duplicate(self, message: dict) -> None:
         response = message.get("claim_response")
-        if self.engine.role == "police" and isinstance(response, dict) and response.get("caught"):
+        if (
+            self.engine.role == "police"
+            and isinstance(response, dict)
+            and response.get("caught")
+        ):
             self.result = "capture"
         elif message.get("win_claim"):
             self.result = "survival"
@@ -42,6 +51,7 @@ class SubGameRuntime:
             self._send_turn(incoming=message)
 
     def run(self, turn_timeout: float = 180.0) -> dict:
+        started_at = datetime.now(UTC).isoformat()
         if self.engine.role == "thief":
             self._send_turn()
         deadline = time.monotonic() + turn_timeout
@@ -72,7 +82,17 @@ class SubGameRuntime:
                 and self.engine.step >= TERMS["max_steps"]
             ):
                 self.result = "survival"
-        return self._finish(min(turn_timeout, 30.0))
+        summary = self._finish(min(turn_timeout, 30.0))
+        summary.update(
+            {
+                "started_at": started_at,
+                "ended_at": datetime.now(UTC).isoformat(),
+                "steps": self.engine.step,
+                "tokens_total": 0,
+                "peer_tokens_total": 0,
+            }
+        )
+        return summary
 
     def _finish(self, audit_wait: float) -> dict:
         envelope = {
@@ -99,5 +119,11 @@ class SubGameRuntime:
             "sub_game_number": self.sub_game,
             "role": self.engine.role,
             "result": self.result,
-            "audit": {"log_verified": verified, "result_agreed": agreed},
+            "audit": {
+                "log_verified": verified,
+                "tampered": bool(peer) and not verified,
+                "local_result_claim": self.result,
+                "peer_result_claim": peer.get("result_claim") if peer else None,
+                "result_agreed": agreed,
+            },
         }

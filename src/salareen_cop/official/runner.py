@@ -10,6 +10,8 @@ from pathlib import Path
 
 from salareen_cop.official.engine import CopEngine
 from salareen_cop.official.mailbox import OfficialMailboxes
+from salareen_cop.official.report_identity import salareen_identity
+from salareen_cop.official.reporting import write_counted_result
 from salareen_cop.official.series import OfficialSeries
 from salareen_cop.official.server import build_unified_server
 from salareen_cop.official.transport import OfficialTransport
@@ -23,7 +25,9 @@ def _thief_engine():
         workspace = Path(__file__).resolve().parents[4]
         sibling = workspace / "salareen-thief" / "src"
         if not sibling.is_dir():
-            raise RuntimeError("install the matching salareen-thief repository") from None
+            raise RuntimeError(
+                "install the matching salareen-thief repository"
+            ) from None
         sys.path.insert(0, str(sibling))
         from salareen_thief.official.engine import ThiefEngine
     return ThiefEngine
@@ -31,7 +35,9 @@ def _thief_engine():
 
 def _commit(value: str) -> str:
     if HEX40.fullmatch(value) is None:
-        raise argparse.ArgumentTypeError("commit must be 40 lowercase hexadecimal characters")
+        raise argparse.ArgumentTypeError(
+            "commit must be 40 lowercase hexadecimal characters"
+        )
     return value
 
 
@@ -46,15 +52,24 @@ def main() -> None:
     parser.add_argument("--port", default=8799, type=int)
     parser.add_argument("--turn-timeout", default=180.0, type=float)
     parser.add_argument("--status", default=".runtime/official-series-result.json")
+    parser.add_argument("--counted-result-dir", type=Path)
+    parser.add_argument("--public-mcp-url")
+    parser.add_argument("--llm-model", default="Codex GPT-5")
     args = parser.parse_args()
 
     mailboxes = OfficialMailboxes()
     series = None
     if args.opponent:
         if not args.police_commit or not args.thief_commit:
-            parser.error("--police-commit and --thief-commit are required with --opponent")
+            parser.error(
+                "--police-commit and --thief-commit are required with --opponent"
+            )
+        if args.counted_result_dir and not args.public_mcp_url:
+            parser.error("--public-mcp-url is required with --counted-result-dir")
         transport = OfficialTransport(args.opponent, mailboxes, args.opponent_token)
         thief_engine = _thief_engine()
+        commits = {"police": args.police_commit, "thief": args.thief_commit}
+        identity = salareen_identity(commits, args.public_mcp_url or "", args.llm_model)
 
         def factory(role: str, number: int, commit: str):
             cls = CopEngine if role == "police" else thief_engine
@@ -64,7 +79,8 @@ def main() -> None:
             transport,
             mailboxes,
             factory,
-            {"police": args.police_commit, "thief": args.thief_commit},
+            commits,
+            identity=identity,
         )
 
     def play() -> None:
@@ -72,10 +88,20 @@ def main() -> None:
         status = Path(args.status)
         status.parent.mkdir(parents=True, exist_ok=True)
         try:
-            payload = asdict(series.run(args.turn_timeout))
+            series_result = series.run(args.turn_timeout)
+            payload = asdict(series_result)
+            if args.counted_result_dir:
+                counted_path = write_counted_result(
+                    args.counted_result_dir,
+                    series_result,
+                    args.opponent,
+                )
+                payload["counted_result_path"] = str(counted_path)
         except Exception as error:
             payload = {"error": type(error).__name__, "detail": str(error)}
-        status.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+        status.write_text(
+            json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8"
+        )
 
     if series is not None:
         threading.Thread(target=play, daemon=True, name="official-series").start()
