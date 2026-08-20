@@ -12,8 +12,8 @@ import os
 import time
 from pathlib import Path
 
+from salareen_cop.official.counted_email import send_counted_gmail_report
 from salareen_cop.official.report_validation import validate_counted_result
-from salareen_cop.reporting import send_gmail_report
 
 RECIPIENT = "rmisegal+uoh26finalgame@gmail.com"
 
@@ -96,7 +96,7 @@ def main() -> None:
     os.environ["SALAREEN_GMAIL_ADDRESS"] = args.sender
     os.environ["SALAREEN_GOOGLE_OAUTH_CLIENT_PATH"] = str(args.oauth_client.resolve())
     os.environ["SALAREEN_GOOGLE_OAUTH_TOKEN_PATH"] = str(args.oauth_token.resolve())
-    response = send_gmail_report(RECIPIENT, doc, idempotency_key(doc))
+    response = send_counted_gmail_report(RECIPIENT, doc, idempotency_key(doc))
     payload = {"recipient": RECIPIENT, "gmail_response": response}
     print(json.dumps(payload, sort_keys=True))
 

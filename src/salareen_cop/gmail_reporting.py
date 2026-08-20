@@ -69,8 +69,11 @@ class GmailReportSender:
         service: Any,
         minimum_interval: float = 1.0,
         clock: Callable[[], float] = time.monotonic,
+        message_builder: Callable[[str, str, dict[str, Any]], dict[str, str]]
+        | None = None,
     ) -> None:
         self._service = service
+        self._message_builder = message_builder or build_json_message
         self._minimum_interval = minimum_interval
         self._clock = clock
         self._sent: set[str] = set()
@@ -95,7 +98,7 @@ class GmailReportSender:
             .messages()
             .send(
                 userId="me",
-                body=build_json_message(sender, recipient, artifact),
+                body=self._message_builder(sender, recipient, artifact),
             )
         )
         result = request.execute()

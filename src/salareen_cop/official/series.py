@@ -46,6 +46,7 @@ class OfficialSeries:
         commits: dict[str, str],
         opponent_group: str = "amireman",
         identity: dict | None = None,
+        game_id: str | None = None,
     ) -> None:
         self.transport = transport
         self.mailboxes = mailboxes
@@ -53,13 +54,15 @@ class OfficialSeries:
         self.commits = commits
         self.opponent = opponent_group
         self.identity = dict(identity or {})
+        self.game_id = game_id or None
 
     def run(self, turn_timeout: float = 180.0) -> SeriesResult:
         result = SeriesResult(
             game_started_at=datetime.now(UTC).isoformat(),
             own_identity=dict(self.identity),
         )
-        result.game_id, result.game_uid = derive_game_ids(GROUP_ID, self.opponent)
+        derived_id, result.game_uid = derive_game_ids(GROUP_ID, self.opponent)
+        result.game_id = self.game_id or derived_id
         for number in range(1, 7):
             role = "police" if number % 2 else "thief"
             peer_role = "thief" if role == "police" else "police"
@@ -69,6 +72,7 @@ class OfficialSeries:
                 self.commits[role],
                 self.opponent,
                 self.identity,
+                self.game_id,
             )
             self.mailboxes.set_offer(offer)
             peer = self.transport.exchange_agreement(offer)

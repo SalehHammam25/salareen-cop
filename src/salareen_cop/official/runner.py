@@ -55,6 +55,7 @@ def main() -> None:
     parser.add_argument("--counted-result-dir", type=Path)
     parser.add_argument("--public-mcp-url")
     parser.add_argument("--llm-model", default="Codex GPT-5")
+    parser.add_argument("--game-id", help="official game id agreed with the opponent")
     args = parser.parse_args()
 
     mailboxes = OfficialMailboxes()
@@ -81,6 +82,7 @@ def main() -> None:
             factory,
             commits,
             identity=identity,
+            game_id=args.game_id,
         )
 
     def play() -> None:

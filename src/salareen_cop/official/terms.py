@@ -74,6 +74,7 @@ def greeting(
     git_commit: str,
     opponent: str,
     identity: dict | None = None,
+    game_id: str | None = None,
 ) -> dict:
     nonce = secrets.token_hex(16)
     _, game_uid = derive_game_ids(GROUP_ID, opponent)
@@ -87,7 +88,7 @@ def greeting(
             "git_commit_hash": git_commit,
         }
     )
-    return {
+    message = {
         "terms": dict(TERMS),
         "nonce": nonce,
         "signature": commit_of(TERMS, nonce),
@@ -97,3 +98,6 @@ def greeting(
         "identity": declared,
         "game_uid": game_uid,
     }
+    if game_id:
+        message["game_id"] = game_id
+    return message
