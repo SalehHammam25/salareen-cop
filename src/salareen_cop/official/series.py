@@ -1,5 +1,6 @@
 """Six-game role-alternating series and final consensus exchange."""
 
+import re
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -9,6 +10,8 @@ from .runtime import SubGameRuntime
 from .settlement import consensus_row, consensus_sha
 from .terms import GROUP_ID, derive_game_ids, greeting
 from .wire import HEX40, clean_audit, verify_greeting
+
+SAFE_ID = re.compile(r"^[A-Za-z0-9._-]+$")
 
 
 @dataclass
@@ -44,7 +47,7 @@ class OfficialSeries:
         mailboxes,
         engine_factory: Callable[[str, int, str], object],
         commits: dict[str, str],
-        opponent_group: str = "amireman",
+        opponent_group: str | None = None,
         identity: dict | None = None,
         game_id: str | None = None,
     ) -> None:
@@ -56,7 +59,18 @@ class OfficialSeries:
         self.identity = dict(identity or {})
         self.game_id = game_id or None
 
+    def _require_opponent(self) -> None:
+        """Reject a missing, malformed, or self-referential opponent group."""
+        group = self.opponent
+        if not isinstance(group, str) or SAFE_ID.fullmatch(group) is None:
+            raise ValueError("opponent_group must match [A-Za-z0-9._-]+")
+        if group == GROUP_ID:
+            raise ValueError("opponent_group must differ from our own group id")
+        if self.game_id is not None and SAFE_ID.fullmatch(self.game_id) is None:
+            raise ValueError("game_id must match [A-Za-z0-9._-]+")
+
     def run(self, turn_timeout: float = 180.0) -> SeriesResult:
+        self._require_opponent()
         result = SeriesResult(
             game_started_at=datetime.now(UTC).isoformat(),
             own_identity=dict(self.identity),

@@ -12,7 +12,7 @@ from salareen_cop.official.engine import CopEngine
 from salareen_cop.official.mailbox import OfficialMailboxes
 from salareen_cop.official.report_identity import salareen_identity
 from salareen_cop.official.reporting import write_counted_result
-from salareen_cop.official.series import OfficialSeries
+from salareen_cop.official.series import SAFE_ID, OfficialSeries
 from salareen_cop.official.server import build_unified_server
 from salareen_cop.official.transport import OfficialTransport
 from salareen_cop.official.wire import HEX40
@@ -44,6 +44,7 @@ def _commit(value: str) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--opponent", help="opponent's stable https://.../mcp URL")
+    parser.add_argument("--opponent-group", help="opponent's exact group_id")
     parser.add_argument("--police-commit", type=_commit)
     parser.add_argument("--thief-commit", type=_commit)
     parser.add_argument("--opponent-token")
@@ -51,7 +52,7 @@ def main() -> None:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=8799, type=int)
     parser.add_argument("--turn-timeout", default=180.0, type=float)
-    parser.add_argument("--status", default=".runtime/official-series-result.json")
+    parser.add_argument("--status", help="new result path for this series")
     parser.add_argument("--counted-result-dir", type=Path)
     parser.add_argument("--public-mcp-url")
     parser.add_argument("--llm-model", default="Codex GPT-5")
@@ -65,8 +66,22 @@ def main() -> None:
             parser.error(
                 "--police-commit and --thief-commit are required with --opponent"
             )
-        if args.counted_result_dir and not args.public_mcp_url:
-            parser.error("--public-mcp-url is required with --counted-result-dir")
+        for name in ("opponent_group", "game_id", "status"):
+            flag = f"--{name.replace('_', '-')}"
+            if not getattr(args, name):
+                parser.error(f"{flag} is required with --opponent")
+        for name in ("opponent_group", "game_id"):
+            flag = f"--{name.replace('_', '-')}"
+            if SAFE_ID.fullmatch(getattr(args, name)) is None:
+                parser.error(f"{flag} must match [A-Za-z0-9._-]+")
+        if Path(args.status).exists():
+            parser.error(f"--status already exists: {args.status}")
+        if args.counted_result_dir:
+            if not args.public_mcp_url:
+                parser.error("--public-mcp-url is required with --counted-result-dir")
+            counted = args.counted_result_dir / f"result_{args.game_id}.json"
+            if counted.exists():
+                parser.error(f"counted result already exists: {counted}")
         transport = OfficialTransport(args.opponent, mailboxes, args.opponent_token)
         thief_engine = _thief_engine()
         commits = {"police": args.police_commit, "thief": args.thief_commit}
@@ -81,6 +96,7 @@ def main() -> None:
             mailboxes,
             factory,
             commits,
+            opponent_group=args.opponent_group,
             identity=identity,
             game_id=args.game_id,
         )
