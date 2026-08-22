@@ -4,11 +4,10 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
-from salareen_cop.base_logic.actions import MoveAction
-from salareen_cop.base_logic.state_types import Board, Coordinate, EpisodeStatus
-from salareen_cop.strategy.blind import BlindCopPolicy
-from salareen_cop.strategy.models import StrategySnapshot
-from salareen_cop.strategy.results import ProposedAction
+from salareen_cop.base_logic.state_types import Board, Coordinate
+from salareen_cop.pursuit.fallback import greedy_choice
+from salareen_cop.pursuit.observer import ThiefObserver
+from salareen_cop.pursuit.policy import PursuitPolicy
 
 from .terms import TERMS, commit_of
 
@@ -31,33 +30,23 @@ class CopEngine:
         self.board = Board(7, 0, "top-left")
         self.position = Coordinate(*TERMS["cop_start"])
         self.barriers: set[Coordinate] = set()
-        self.policy = BlindCopPolicy()
         self.step = 0
         self.records: list[dict] = []
+        self.observer = ThiefObserver(self.board, Coordinate(*TERMS["thief_start"]))
+        self.pursuit = PursuitPolicy(self.board)
+        self.history: list[Coordinate] = [self.position]
         self._record("STAY", "initial", None, None)
 
-    def _target(self, scent: dict) -> Coordinate:
-        if not scent:
-            return Coordinate(*TERMS["thief_start"])
-        key = max(scent, key=lambda item: (scent[item], item))
-        row, col = (int(part) for part in key.split(","))
-        return Coordinate(row, col)
-
-    def _choice(self, scent: dict) -> str:
-        snapshot = StrategySnapshot(
-            self.board,
-            self.position,
-            frozenset(self.barriers),
-            TERMS["barriers_max"] - len(self.barriers),
-            EpisodeStatus.ACTIVE,
-            self._target(scent),
-        )
-        proposal = self.policy.propose(snapshot)
-        if not isinstance(proposal, ProposedAction) or not isinstance(
-            proposal.action, MoveAction
-        ):
-            return "STAY"
-        return proposal.action.choice.value
+    def _choice(self, message: dict) -> str:
+        target = self.observer.update(message)
+        barriers = frozenset(self.barriers)
+        try:
+            return self.pursuit.choose(self.position, barriers, target, self.history)
+        except Exception:
+            remaining = TERMS["barriers_max"] - len(self.barriers)
+            return greedy_choice(
+                self.board, self.position, barriers, remaining, target
+            )
 
     def _apply_move(self, choice: str) -> None:
         row, col = DELTAS.get(choice, (0, 0))
@@ -110,8 +99,9 @@ class CopEngine:
 
     def take_turn(self, incoming: dict | None = None) -> dict:
         self.step += 1
-        choice = self._choice((incoming or {}).get("smell_grid", {}))
+        choice = self._choice(incoming or {})
         self._apply_move(choice)
+        self.history.append(self.position)
         claim = [self.position.row, self.position.col]
         record = self._record(
             "STAY" if choice == "STAY" else f"MOVE:{choice}",
