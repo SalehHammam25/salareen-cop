@@ -3,10 +3,11 @@
 import time
 from datetime import UTC, datetime
 
+from .audit_window import LOG, await_window, sweep_backlog
 from .delivery import DeliveryInbox, EquivocationError, ReorderWindowError
 from .settlement import verify_records
 from .terms import TERMS
-from .wire import clean_audit, clean_turn
+from .wire import clean_turn
 
 
 class SubGameRuntime:
@@ -52,6 +53,7 @@ class SubGameRuntime:
 
     def run(self, turn_timeout: float = 180.0) -> dict:
         started_at = datetime.now(UTC).isoformat()
+        LOG.info("subgame %s start role=%s", self.sub_game, self.engine.role)
         if self.engine.role == "thief":
             self._send_turn()
         deadline = time.monotonic() + turn_timeout
@@ -63,16 +65,34 @@ class SubGameRuntime:
                 continue
             message = clean_turn(raw)
             if message is None:
+                LOG.info("turn ignored sub_game=%s reason=malformed", self.sub_game)
                 continue
             deadline = time.monotonic() + turn_timeout
             try:
                 ready = self.delivery.offer(message)
-            except (EquivocationError, ReorderWindowError):
+            except (EquivocationError, ReorderWindowError) as error:
+                LOG.info(
+                    "turn rejected sub_game=%s step=%s reason=%s",
+                    self.sub_game,
+                    message["step"],
+                    type(error).__name__,
+                )
                 self.result = "technical_loss"
                 break
             if not ready:
+                LOG.info(
+                    "turn duplicate sub_game=%s step=%s",
+                    self.sub_game,
+                    message["step"],
+                )
                 self._terminal_duplicate(message)
             for item in ready:
+                LOG.info(
+                    "turn accepted sub_game=%s step=%s sender=%s",
+                    self.sub_game,
+                    item["step"],
+                    item["sender"],
+                )
                 self._process(item)
                 if self.result is not None:
                     break
@@ -99,22 +119,16 @@ class SubGameRuntime:
             "sender": self.engine.role,
             "records": self.engine.records,
             "result_claim": self.result,
+            "sub_game": self.sub_game,
+            "sub_game_number": self.sub_game,
         }
+        early = sweep_backlog(self.transport, self.sub_game)
         self.transport.send_audit(envelope)
-        peer = None
-        deadline = time.monotonic() + audit_wait
-        while time.monotonic() < deadline:
-            raw = self.transport.poll_audit(deadline - time.monotonic())
-            if raw is None:
-                break
-            candidate = clean_audit(raw)
-            if candidate and candidate.get("consensus_sha") is None:
-                peer = candidate
-                break
+        if early is None:
+            early = await_window(self.transport, self.sub_game, audit_wait)
+        peer = early
         verified = bool(peer) and verify_records(peer["records"], self.delivery.played)
         agreed = bool(peer) and peer["result_claim"] == self.result
-        while self.transport.poll_turn(0.0) is not None:
-            pass
         return {
             "sub_game_number": self.sub_game,
             "role": self.engine.role,
