@@ -105,16 +105,26 @@ class PursuitPolicy:
         thief: Coordinate | None,
         history: object = (),
     ) -> str:
-        """Return one legal move choice; STAY is always a legal last resort."""
+        """Return one legal move choice; STAY is always a legal last resort.
+
+        An estimate on our own cell is self-contradictory evidence: overlap is
+        resolved by capture_claim, never by scent. It therefore never counts as
+        an immediate capture, and STAY is dropped from the ranking so a forged
+        peak cannot pin the police in place while another legal action exists.
+        """
         options = self.candidates(position, barriers)
         if thief is None:
             return "STAY"
         for name, cell in options:
-            if cell == thief:
+            if cell == thief and cell != position:
                 return name
         reach = self.reach_maps(thief, barriers)
+        onto_self = thief == position
         ranked = [
             (self.rank(cell, index, reach, history), name)
             for index, (name, cell) in enumerate(options)
+            if not (onto_self and cell == position)
         ]
+        if not ranked:
+            return "STAY"
         return min(ranked)[1]
