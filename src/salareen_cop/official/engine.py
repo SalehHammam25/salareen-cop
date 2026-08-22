@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from salareen_cop.base_logic.state_types import Board, Coordinate
-from salareen_cop.pursuit.fallback import greedy_choice
 from salareen_cop.pursuit.observer import ThiefObserver
 from salareen_cop.pursuit.policy import PursuitPolicy
 
@@ -39,14 +38,9 @@ class CopEngine:
 
     def _choice(self, message: dict) -> str:
         target = self.observer.update(message)
-        barriers = frozenset(self.barriers)
-        try:
-            return self.pursuit.choose(self.position, barriers, target, self.history)
-        except Exception:
-            remaining = TERMS["barriers_max"] - len(self.barriers)
-            return greedy_choice(
-                self.board, self.position, barriers, remaining, target
-            )
+        return self.pursuit.choose(
+            self.position, frozenset(self.barriers), target, self.history
+        )
 
     def _apply_move(self, choice: str) -> None:
         row, col = DELTAS.get(choice, (0, 0))

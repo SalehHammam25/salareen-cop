@@ -1,5 +1,8 @@
 """Focused tests for the deterministic predictive police pursuit policy."""
 
+import inspect
+from pathlib import Path
+
 from salareen_cop.base_logic.actions import MoveChoice
 from salareen_cop.base_logic.movement import target_for, validate_target
 from salareen_cop.base_logic.state_types import Board, Coordinate
@@ -93,3 +96,34 @@ def test_every_selected_move_is_legal_everywhere() -> None:
                 name = policy.choose(police, barriers, thief, [police])
                 target = target_for(police, MoveChoice(name))
                 assert validate_target(BOARD, police, target, barriers) is None
+
+
+def test_policy_is_total_and_legal_over_a_wide_state_sweep() -> None:
+    policy = PursuitPolicy(BOARD)
+    cells = [Coordinate(row, col) for row in range(7) for col in range(7)]
+    barrier_sets = (
+        EMPTY,
+        frozenset({Coordinate(3, col) for col in range(7)}),
+        frozenset(
+            cell
+            for cell in cells
+            if (cell.row + cell.col) % 2 == 0 and cell != Coordinate(0, 0)
+        ),
+    )
+    seen = 0
+    for barriers in barrier_sets:
+        free = [cell for cell in cells if cell not in barriers]
+        for police in free:
+            for thief in (*free[::5], None):
+                name = policy.choose(police, barriers, thief, [police, police])
+                assert name in {"N", "S", "E", "W", "STAY"}
+                target = target_for(police, MoveChoice(name))
+                assert validate_target(BOARD, police, target, barriers) is None
+                seen += 1
+    assert seen > 500
+
+
+def test_production_engine_keeps_no_broad_strategy_fallback() -> None:
+    source = Path(inspect.getfile(CopEngine)).read_text(encoding="utf-8")
+    assert "except" not in source
+    assert "fallback" not in source
